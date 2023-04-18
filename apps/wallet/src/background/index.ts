@@ -7,6 +7,7 @@ import Browser from 'webextension-polyfill';
 import { LOCK_ALARM_NAME } from './Alarms';
 import NetworkEnv from './NetworkEnv';
 import Permissions from './Permissions';
+import * as Qredo from './Qredo';
 import { Connections } from './connections';
 import Keyring from './keyring';
 import * as Qredo from './qredo';
