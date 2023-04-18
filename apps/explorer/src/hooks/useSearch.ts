@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRpcClient, useGetSystemState } from '@mysten/core';
+import { useRpcClient, useGetSystemState, isSuiNSName } from '@mysten/core';
 import {
     isValidTransactionDigest,
     isValidSuiAddress,
@@ -80,6 +80,20 @@ const getResultsForCheckpoint = async (rpc: JsonRpcProvider, query: string) => {
 };
 
 const getResultsForAddress = async (rpc: JsonRpcProvider, query: string) => {
+    if (isSuiNSName(query)) {
+        const resolved = await rpc.resolveNameServiceAddress({ name: query });
+        return {
+            label: 'address',
+            results: [
+                {
+                    id: resolved,
+                    label: resolved,
+                    type: 'address',
+                },
+            ],
+        };
+    }
+
     const normalized = normalizeSuiObjectId(query);
     if (!isValidSuiAddress(normalized) || isGenesisLibAddress(normalized))
         return null;
@@ -141,18 +155,6 @@ const getResultsForValidatorByPoolIdOrSuiAddress = async (
     };
 };
 
-// This should align with whatever names we want to resolve, and is just to optimize not making requests when
-// we know the input isn't a resolvable name.
-const SUI_NS_DOMAINS = ['.sui'];
-const getResultsForSuiNS = async (rpc: JsonRpcProvider, query: string) => {
-    if (!SUI_NS_DOMAINS.some((domain) => query.endsWith(domain))) return null;
-
-    return {
-        label: 'Domains',
-        results: [{ id: query, label: query, type: 'address' }],
-    };
-};
-
 export function useSearch(query: string) {
     const rpc = useRpcClient();
     const { data: systemStateSummery } = useGetSystemState();
@@ -171,7 +173,6 @@ export function useSearch(query: string) {
                         systemStateSummery || null,
                         query
                     ),
-                    getResultsForSuiNS(rpc, query),
                 ])
             ).filter(
                 (r) => r.status === 'fulfilled' && r.value
