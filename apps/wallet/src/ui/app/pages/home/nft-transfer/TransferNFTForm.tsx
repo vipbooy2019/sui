@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { useRpcClient } from '@mysten/core';
+import { isSuiNSName, useRpcClient } from '@mysten/core';
 import { ArrowRight16 } from '@mysten/icons';
 import { getTransactionDigest, TransactionBlock } from '@mysten/sui.js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -37,6 +37,11 @@ export function TransferNFTForm({ objectId }: { objectId: string }) {
             if (!to || !signer) {
                 throw new Error('Missing data');
             }
+
+            if (isSuiNSName(to)) {
+                to = await rpc.resolveNameServiceAddress({ name: to });
+            }
+
             const tx = new TransactionBlock();
             tx.transferObjects([tx.object(objectId)], tx.pure(to));
 

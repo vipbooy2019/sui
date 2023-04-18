@@ -6,6 +6,7 @@ import {
     useFormatCoin,
     CoinFormat,
     useRpcClient,
+    isSuiNSName,
 } from '@mysten/core';
 import { ArrowRight16 } from '@mysten/icons';
 import { SUI_TYPE_ARG, Coin as CoinAPI, type CoinStruct } from '@mysten/sui.js';
@@ -176,7 +177,7 @@ export function SendTokenForm({
                 enableReinitialize
                 validateOnMount
                 validateOnChange
-                onSubmit={({
+                onSubmit={async ({
                     to,
                     amount,
                     isPayAllSui,
@@ -186,6 +187,12 @@ export function SendTokenForm({
                     const coinsIDs = [...coins]
                         .sort((a, b) => Number(b.balance) - Number(a.balance))
                         .map(({ coinObjectId }) => coinObjectId);
+
+                    if (isSuiNSName(to)) {
+                        to = await rpc.resolveNameServiceAddress({
+                            name: to,
+                        });
+                    }
 
                     const data = {
                         to,

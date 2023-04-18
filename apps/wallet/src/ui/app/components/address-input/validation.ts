@@ -14,10 +14,8 @@ export function createSuiAddressValidation(rpc: JsonRpcProvider) {
         .test(
             'is-sui-address',
             'Invalid address. Please check again.',
-            async (value) => {
+            async (value, ctx) => {
                 if (isSuiNSName(value)) {
-                    // TODO: Remove:
-                    return true;
                     const address = await rpc.resolveNameServiceAddress({
                         name: value,
                     });

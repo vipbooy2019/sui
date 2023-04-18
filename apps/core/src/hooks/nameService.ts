@@ -14,28 +14,26 @@ export function isSuiNSName(name: string) {
 export function useResolveSuiNSAddress(name?: string | null) {
     const rpc = useRpcClient();
 
-    return useQuery(
-        ['resolve-suins-address', name],
-        async () => {
+    return useQuery({
+        queryKey: ['resolve-suins-address', name],
+        queryFn: async () => {
             return await rpc.resolveNameServiceAddress({
                 name: name!,
             });
         },
-        {
-            enabled: !!name,
-            refetchOnWindowFocus: false,
-            refetchOnMount: false,
-            retry: false,
-        }
-    );
+        enabled: !!name,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        retry: false,
+    });
 }
 
 export function useResolveSuiNSName(address?: SuiAddress | null) {
     const rpc = useRpcClient();
 
-    return useQuery(
-        ['resolve-suins-name', address],
-        async () => {
+    return useQuery({
+        queryKey: ['resolve-suins-name', address],
+        queryFn: async () => {
             // NOTE: We only fetch 1 here because it's the default name.
             const { data } = await rpc.resolveNameServiceNames({
                 address: address!,
@@ -44,11 +42,9 @@ export function useResolveSuiNSName(address?: SuiAddress | null) {
 
             return data[0] || null;
         },
-        {
-            enabled: !!address,
-            refetchOnWindowFocus: false,
-            refetchOnMount: false,
-            retry: false,
-        }
-    );
+        enabled: !!address,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        retry: false,
+    });
 }
