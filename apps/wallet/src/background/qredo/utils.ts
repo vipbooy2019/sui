@@ -3,6 +3,10 @@
 
 import Browser from 'webextension-polyfill';
 
+import {
+    type QredoConnectPendingRequest,
+    type UIQredoPendingRequest,
+} from './types';
 import { type QredoConnectInput } from '_src/dapp-interface/WalletStandardInterface';
 
 export function qredoConnectPageUrl(requestID: string) {
@@ -40,5 +44,18 @@ export function validateInputOrThrow(input: QredoConnectInput) {
         service,
         apiUrl: apiUrl.toString(),
         token,
+    };
+}
+
+export function toUIQredoPendingRequest(
+    stored: QredoConnectPendingRequest
+): UIQredoPendingRequest {
+    return {
+        id: stored.id,
+        service: stored.service,
+        apiUrl: stored.apiUrl,
+        origin: stored.origin,
+        originFavIcon: stored.originFavIcon,
+        partialToken: `…${stored.token.slice(-8)}`,
     };
 }

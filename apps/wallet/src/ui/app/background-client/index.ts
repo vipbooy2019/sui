@@ -8,9 +8,14 @@ import {
     type ExportedKeypair,
     type SignedMessage,
 } from '@mysten/sui.js';
+import { type QueryClient } from '@tanstack/react-query';
 import { lastValueFrom, map, take } from 'rxjs';
 
 import { growthbook } from '../experimentation/feature-gating';
+import {
+    makeQredoPendingRequestQueryKey,
+    QREDO_PENDING_REQUEST_KEY_COMMON,
+} from '../pages/qredo-connect/utils';
 import { createMessage } from '_messages';
 import { PortStream } from '_messaging/PortStream';
 import { type BasePayload } from '_payloads';
@@ -25,6 +30,10 @@ import { setActiveOrigin, changeActiveNetwork } from '_redux/slices/app';
 import { setPermissions } from '_redux/slices/permissions';
 import { setTransactionRequests } from '_redux/slices/transaction-requests';
 import { type SerializedLedgerAccount } from '_src/background/keyring/LedgerAccount';
+import {
+    isQredoConnectPayload,
+    type QredoConnectPayload,
+} from '_src/shared/messaging/messages/payloads/QredoConnect';
 
 import type { SuiAddress, SuiTransactionBlockResponse } from '@mysten/sui.js';
 import type { Message } from '_messages';
@@ -49,13 +58,15 @@ export class BackgroundClient {
     private _portStream: PortStream | null = null;
     private _dispatch: AppDispatch | null = null;
     private _initialized = false;
+    private _queryClient: QueryClient | null = null;
 
-    public init(dispatch: AppDispatch) {
+    public init(dispatch: AppDispatch, queryClient: QueryClient) {
         if (this._initialized) {
             throw new Error('[BackgroundClient] already initialized');
         }
         this._initialized = true;
         this._dispatch = dispatch;
+        this._queryClient = queryClient;
         this.createPortStream();
         this.sendAppStatus();
         this.setupAppStatusUpdateInterval();
@@ -364,6 +375,33 @@ export class BackgroundClient {
         );
     }
 
+    public fetchPendingQredoConnectRequests() {
+        return lastValueFrom(
+            this.sendMessage(
+                createMessage<QredoConnectPayload<'getPendingRequests'>>({
+                    type: 'qredo-connect',
+                    method: 'getPendingRequests',
+                    args: undefined,
+                })
+            ).pipe(
+                take(1),
+                map(({ payload }) => {
+                    if (
+                        isQredoConnectPayload(
+                            payload,
+                            'getPendingRequestsResponse'
+                        )
+                    ) {
+                        return payload.args.requests;
+                    }
+                    throw new Error(
+                        'Error unknown response for fetch pending qredo requests message'
+                    );
+                })
+            )
+        );
+    }
+
     private setupAppStatusUpdateInterval() {
         setInterval(() => {
             this.sendAppStatus();
@@ -413,7 +451,7 @@ export class BackgroundClient {
     }
 
     private handleIncomingMessage(msg: Message) {
-        if (!this._initialized || !this._dispatch) {
+        if (!this._initialized || !this._dispatch || !this._queryClient) {
             throw new Error(
                 'BackgroundClient is not initialized to handle incoming messages'
             );
@@ -440,6 +478,22 @@ export class BackgroundClient {
         } else if (isSetNetworkPayload(payload)) {
             action = changeActiveNetwork({
                 network: payload.network,
+            });
+        } else if (isQredoConnectPayload(payload, 'pendingRequestsUpdate')) {
+            const currentData = this._queryClient.getQueriesData({
+                queryKey: QREDO_PENDING_REQUEST_KEY_COMMON,
+            });
+            const { requests } = payload.args;
+            currentData.forEach(([queryKey]) => {
+                if (!requests.find(({ id }) => id === queryKey[2])) {
+                    this._queryClient?.setQueryData(queryKey, null);
+                }
+            });
+            requests.forEach((aRequest) => {
+                this._queryClient?.setQueryData(
+                    makeQredoPendingRequestQueryKey(aRequest.id),
+                    aRequest
+                );
             });
         }
         if (action) {

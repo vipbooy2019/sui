@@ -1,13 +1,17 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+import { debounce } from 'throttle-debounce';
 import { v4 as uuid } from 'uuid';
 
+import { type Connections } from '../connections';
 import {
     setToSessionStorage,
     getFromSessionStorage,
     isSessionStorageSupported,
+    addSessionStorageEventListener,
 } from '../storage-utils';
+import { toUIQredoPendingRequest } from './utils';
 
 import type {
     QredoConnectPendingRequest,
@@ -111,4 +115,19 @@ export async function updatePendingRequest(
         request.token = change.token;
     }
     await storePendingRequest(request);
+}
+
+export function registerForPendingRequestsChanges(connections: Connections) {
+    addSessionStorageEventListener(
+        debounce(100, (changes) => {
+            if (SESSION_STORAGE_KEY in changes) {
+                connections.notifyUI({
+                    event: 'pendingQredoConnectUpdate',
+                    pendingRequests: changes[SESSION_STORAGE_KEY].newValue.map(
+                        toUIQredoPendingRequest
+                    ),
+                });
+            }
+        })
+    );
 }

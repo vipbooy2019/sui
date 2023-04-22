@@ -14,3 +14,8 @@ export type QredoConnectPendingRequest = {
     windowID: number | null;
     messageIDs: string[];
 } & QredoConnectRequestIdentity;
+
+export type UIQredoPendingRequest = Pick<
+    QredoConnectPendingRequest,
+    'id' | 'service' | 'apiUrl' | 'origin' | 'originFavIcon'
+> & { partialToken: `…${string}` };

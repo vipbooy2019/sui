@@ -4,6 +4,7 @@
 import { BehaviorSubject, filter, switchMap, takeUntil } from 'rxjs';
 
 import NetworkEnv from '../NetworkEnv';
+import { getAllUIQredoPendingRequests } from '../qredo';
 import { Connection } from './Connection';
 import { createMessage } from '_messages';
 import { type ErrorPayload, isBasePayload } from '_payloads';
@@ -20,6 +21,10 @@ import Tabs from '_src/background/Tabs';
 import Transactions from '_src/background/Transactions';
 import Keyring from '_src/background/keyring';
 import { growthbook } from '_src/shared/experimentation/features';
+import {
+    type QredoConnectPayload,
+    isQredoConnectPayload,
+} from '_src/shared/messaging/messages/payloads/QredoConnect';
 
 import type { Message } from '_messages';
 import type { PortChannelName } from '_messaging/PortChannelName';
@@ -141,6 +146,21 @@ export class UiConnection extends Connection {
             } else if (isSetNetworkPayload(payload)) {
                 await NetworkEnv.setActiveNetwork(payload.network);
                 this.send(createMessage({ type: 'done' }, id));
+            } else if (isQredoConnectPayload(payload, 'getPendingRequests')) {
+                this.send(
+                    createMessage<
+                        QredoConnectPayload<'getPendingRequestsResponse'>
+                    >(
+                        {
+                            type: 'qredo-connect',
+                            method: 'getPendingRequestsResponse',
+                            args: {
+                                requests: await getAllUIQredoPendingRequests(),
+                            },
+                        },
+                        msg.id
+                    )
+                );
             }
         } catch (e) {
             this.send(

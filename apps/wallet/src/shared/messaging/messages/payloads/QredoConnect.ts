@@ -3,11 +3,15 @@
 
 import { type BasePayload, isBasePayload } from './BasePayload';
 import { type Payload } from './Payload';
+import { type UIQredoPendingRequest } from '_src/background/qredo/types';
 import { type QredoConnectInput } from '_src/dapp-interface/WalletStandardInterface';
 
 type Methods = {
     connect: QredoConnectInput;
     connectResponse: { allowed: boolean };
+    pendingRequestsUpdate: { requests: UIQredoPendingRequest[] };
+    getPendingRequests: void;
+    getPendingRequestsResponse: { requests: UIQredoPendingRequest[] };
 };
 
 export interface QredoConnectPayload<M extends keyof Methods>
@@ -25,8 +29,6 @@ export function isQredoConnectPayload<M extends keyof Methods>(
         isBasePayload(payload) &&
         payload.type === 'qredo-connect' &&
         'method' in payload &&
-        payload.method === method &&
-        'args' in payload &&
-        !!payload.args
+        payload.method === method
     );
 }
