@@ -14,6 +14,7 @@ export type SummaryCardProps = {
     minimalPadding?: boolean;
     showDivider?: boolean;
     noBorder?: boolean;
+    fullHeight?: boolean;
 };
 
 export function SummaryCard({
@@ -23,11 +24,15 @@ export function SummaryCard({
     minimalPadding,
     showDivider = false,
     noBorder = false,
+    fullHeight = false,
 }: SummaryCardProps) {
     return (
         <div
             className={clsx(
-                { 'border border-solid border-gray-45': !noBorder },
+                {
+                    'border border-solid border-gray-45': !noBorder,
+                    'min-h-full': fullHeight,
+                },
                 'bg-white flex flex-col flex-nowrap rounded-2xl'
             )}
         >
