@@ -117,17 +117,23 @@ export async function updatePendingRequest(
     await storePendingRequest(request);
 }
 
+const debouncedUIPendingQredoUpdate = debounce(
+    100,
+    (connections: Connections, newValue: QredoConnectPendingRequest[]) => {
+        connections.notifyUI({
+            event: 'pendingQredoConnectUpdate',
+            pendingRequests: newValue.map(toUIQredoPendingRequest),
+        });
+    }
+);
+
 export function registerForPendingRequestsChanges(connections: Connections) {
-    addSessionStorageEventListener(
-        debounce(100, (changes) => {
-            if (SESSION_STORAGE_KEY in changes) {
-                connections.notifyUI({
-                    event: 'pendingQredoConnectUpdate',
-                    pendingRequests: changes[SESSION_STORAGE_KEY].newValue.map(
-                        toUIQredoPendingRequest
-                    ),
-                });
-            }
-        })
-    );
+    addSessionStorageEventListener((changes) => {
+        if (SESSION_STORAGE_KEY in changes) {
+            debouncedUIPendingQredoUpdate(
+                connections,
+                changes[SESSION_STORAGE_KEY].newValue
+            );
+        }
+    });
 }
