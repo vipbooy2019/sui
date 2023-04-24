@@ -129,4 +129,4 @@ Browser.windows.onRemoved.addListener(async (id) => {
     await Qredo.handleOnWindowClosed(id, connections);
 });
 
-Qredo.registerForPendingRequestsChanges(connections);
+Qredo.registerForQredoChanges(connections);

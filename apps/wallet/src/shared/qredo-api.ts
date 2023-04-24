@@ -117,7 +117,6 @@ export class QredoAPI {
     }
 
     #request = async (...params: Parameters<typeof fetch>) => {
-        console.log('qredo api request', ...params);
         // TODO: append authToken to request?
         let tries = 0;
         while (tries++ <= 1) {

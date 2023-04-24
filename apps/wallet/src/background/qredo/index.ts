@@ -114,7 +114,7 @@ export async function getUIQredoPendingRequest(requestID: string) {
     return null;
 }
 
-export { registerForPendingRequestsChanges } from './storage';
+export { registerForQredoChanges } from './storage';
 
 const IN_PROGRESS_ACCESS_TOKENS_RENEWALS: Record<
     string,
@@ -126,11 +126,6 @@ export async function getUIQredoInfo(
     renewAccessToken: boolean
 ): Promise<UIQredoInfo | null> {
     const pendingRequest = await getPendingRequest(requestID);
-    console.log('getUIQredoInfo', {
-        requestID,
-        renewAccessToken,
-        pendingRequest,
-    });
     if (!pendingRequest) {
         // TODO: check if is an accepted connection
         return null;

@@ -127,7 +127,7 @@ const debouncedUIPendingQredoUpdate = debounce(
     }
 );
 
-export function registerForPendingRequestsChanges(connections: Connections) {
+export function registerForQredoChanges(connections: Connections) {
     addSessionStorageEventListener((changes) => {
         if (SESSION_STORAGE_KEY in changes) {
             debouncedUIPendingQredoUpdate(
@@ -135,5 +135,6 @@ export function registerForPendingRequestsChanges(connections: Connections) {
                 changes[SESSION_STORAGE_KEY].newValue
             );
         }
+        // TODO notify for qredo accepted connections changes
     });
 }

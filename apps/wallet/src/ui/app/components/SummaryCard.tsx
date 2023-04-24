@@ -33,7 +33,7 @@ export function SummaryCard({
                     'border border-solid border-gray-45': !noBorder,
                     'min-h-full': fullHeight,
                 },
-                'bg-white flex flex-col flex-nowrap rounded-2xl'
+                'bg-white flex flex-col flex-nowrap rounded-2xl w-full'
             )}
         >
             {header ? (
@@ -50,7 +50,7 @@ export function SummaryCard({
             ) : null}
             <div
                 className={clsx(
-                    'flex-1 flex flex-col items-stretch flex-nowrap px-4',
+                    'flex-1 flex flex-col items-stretch flex-nowrap px-4 overflow-y-auto',
                     minimalPadding ? 'py-2' : 'py-4',
                     showDivider
                         ? 'divide-x-0 divide-y divide-gray-40 divide-solid'

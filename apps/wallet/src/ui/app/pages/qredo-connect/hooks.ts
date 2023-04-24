@@ -26,7 +26,6 @@ export function useFetchQredoAccounts(
     params?: GetWalletsParams
 ) {
     const [api, isAPILoading, apiInitError] = useQredoAPI(qredoID);
-    console.log('useFetchQredoAccounts api', api, isAPILoading, apiInitError);
     return useQuery(
         ['qredo', 'fetch', 'accounts', qredoID],
         async () => {
