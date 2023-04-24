@@ -1,6 +1,8 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+import { type QueryKey } from '@tanstack/react-query';
+
 import { type UIQredoPendingRequest } from '_src/background/qredo/types';
 
 export const QREDO_PENDING_REQUEST_KEY_COMMON = [
@@ -12,7 +14,7 @@ export function makeQredoPendingRequestQueryKey(requestID: string) {
     return [...QREDO_PENDING_REQUEST_KEY_COMMON, requestID];
 }
 
-export function getQredoPendingRequestFromQueryKey(queryKey: string[]) {
+export function getQredoPendingRequestFromQueryKey(queryKey: QueryKey) {
     return queryKey[2];
 }
 

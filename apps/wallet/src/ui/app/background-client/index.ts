@@ -13,6 +13,7 @@ import { lastValueFrom, map, take } from 'rxjs';
 
 import { growthbook } from '../experimentation/feature-gating';
 import {
+    getQredoPendingRequestFromQueryKey,
     makeQredoPendingRequestQueryKey,
     QREDO_PENDING_REQUEST_KEY_COMMON,
 } from '../pages/qredo-connect/utils';
@@ -375,13 +376,13 @@ export class BackgroundClient {
         );
     }
 
-    public fetchPendingQredoConnectRequests() {
+    public fetchPendingQredoConnectRequest(requestID: string) {
         return lastValueFrom(
             this.sendMessage(
-                createMessage<QredoConnectPayload<'getPendingRequests'>>({
+                createMessage<QredoConnectPayload<'getPendingRequest'>>({
                     type: 'qredo-connect',
-                    method: 'getPendingRequests',
-                    args: undefined,
+                    method: 'getPendingRequest',
+                    args: { requestID },
                 })
             ).pipe(
                 take(1),
@@ -389,13 +390,37 @@ export class BackgroundClient {
                     if (
                         isQredoConnectPayload(
                             payload,
-                            'getPendingRequestsResponse'
+                            'getPendingRequestResponse'
                         )
                     ) {
-                        return payload.args.requests;
+                        return payload.args.request;
                     }
                     throw new Error(
                         'Error unknown response for fetch pending qredo requests message'
+                    );
+                })
+            )
+        );
+    }
+
+    public getQredoApiInfo(qredoID: string, refreshAccessToken = false) {
+        return lastValueFrom(
+            this.sendMessage(
+                createMessage<QredoConnectPayload<'getQredoInfo'>>({
+                    type: 'qredo-connect',
+                    method: 'getQredoInfo',
+                    args: { qredoID, refreshAccessToken },
+                })
+            ).pipe(
+                take(1),
+                map(({ payload }) => {
+                    if (
+                        isQredoConnectPayload(payload, 'getQredoInfoResponse')
+                    ) {
+                        return payload.args;
+                    }
+                    throw new Error(
+                        'Error unknown response for get qredo info message'
                     );
                 })
             )
@@ -485,7 +510,12 @@ export class BackgroundClient {
             });
             const { requests } = payload.args;
             currentData.forEach(([queryKey]) => {
-                if (!requests.find(({ id }) => id === queryKey[2])) {
+                if (
+                    !requests.find(
+                        ({ id }) =>
+                            id === getQredoPendingRequestFromQueryKey(queryKey)
+                    )
+                ) {
                     this._queryClient?.setQueryData(queryKey, null);
                 }
             });
@@ -495,7 +525,7 @@ export class BackgroundClient {
                     aRequest
                 );
             });
-        }
+        } // TODO add updates for UIQredoInfo
         if (action) {
             this._dispatch(action);
         }

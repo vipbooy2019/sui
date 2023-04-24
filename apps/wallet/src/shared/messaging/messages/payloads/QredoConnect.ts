@@ -3,15 +3,20 @@
 
 import { type BasePayload, isBasePayload } from './BasePayload';
 import { type Payload } from './Payload';
-import { type UIQredoPendingRequest } from '_src/background/qredo/types';
+import {
+    type UIQredoInfo,
+    type UIQredoPendingRequest,
+} from '_src/background/qredo/types';
 import { type QredoConnectInput } from '_src/dapp-interface/WalletStandardInterface';
 
 type Methods = {
     connect: QredoConnectInput;
     connectResponse: { allowed: boolean };
     pendingRequestsUpdate: { requests: UIQredoPendingRequest[] };
-    getPendingRequests: void;
-    getPendingRequestsResponse: { requests: UIQredoPendingRequest[] };
+    getPendingRequest: { requestID: string };
+    getPendingRequestResponse: { request: UIQredoPendingRequest | null };
+    getQredoInfo: { qredoID: string; refreshAccessToken: boolean };
+    getQredoInfoResponse: { qredoInfo: UIQredoInfo | null };
 };
 
 export interface QredoConnectPayload<M extends keyof Methods>

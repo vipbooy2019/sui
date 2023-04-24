@@ -12,7 +12,7 @@ import {
     storePendingRequests,
     updatePendingRequest,
 } from './storage';
-import { type QredoConnectPendingRequest } from './types';
+import { type UIQredoInfo, type QredoConnectPendingRequest } from './types';
 import {
     qredoConnectPageUrl,
     toUIQredoPendingRequest,
@@ -20,6 +20,7 @@ import {
 } from './utils';
 import { type QredoConnectInput } from '_src/dapp-interface/WalletStandardInterface';
 import { type Message } from '_src/shared/messaging/messages';
+import { type AuthTokenResponse, QredoAPI } from '_src/shared/qredo-api';
 
 export async function requestUserApproval(
     input: QredoConnectInput,
@@ -44,6 +45,14 @@ export async function requestUserApproval(
             !(await Tabs.highlight({
                 url: qredoConnectUrl,
                 windowID: existingPendingRequest.windowID || undefined,
+                match: ({ url, inAppRedirectUrl }) => {
+                    const urlMatch = `/dapp/qredo-connect/${existingPendingRequest.id}`;
+                    return (
+                        url.includes(urlMatch) ||
+                        (!!inAppRedirectUrl &&
+                            inAppRedirectUrl.includes(urlMatch))
+                    );
+                },
             }))
         ) {
             const approvalWindow = new Window(qredoConnectUrl);
@@ -97,8 +106,59 @@ export async function handleOnWindowClosed(
     await storePendingRequests(remainingRequests);
 }
 
-export async function getAllUIQredoPendingRequests() {
-    return (await getAllPendingRequests()).map(toUIQredoPendingRequest);
+export async function getUIQredoPendingRequest(requestID: string) {
+    const pendingRequest = await getPendingRequest(requestID);
+    if (pendingRequest) {
+        return toUIQredoPendingRequest(pendingRequest);
+    }
+    return null;
 }
 
 export { registerForPendingRequestsChanges } from './storage';
+
+const IN_PROGRESS_ACCESS_TOKENS_RENEWALS: Record<
+    string,
+    Promise<AuthTokenResponse> | null
+> = {};
+
+export async function getUIQredoInfo(
+    requestID: string,
+    renewAccessToken: boolean
+): Promise<UIQredoInfo | null> {
+    const pendingRequest = await getPendingRequest(requestID);
+    console.log('getUIQredoInfo', {
+        requestID,
+        renewAccessToken,
+        pendingRequest,
+    });
+    if (!pendingRequest) {
+        // TODO: check if is an accepted connection
+        return null;
+    }
+    // TODO implement the case we have a stored connection with existing accessToken (don't forget renewAccessToken)
+    const refreshToken = pendingRequest.token;
+    let accessToken: string;
+    if (!IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID]) {
+        IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID] = new QredoAPI(
+            requestID,
+            pendingRequest.apiUrl
+        )
+            .createAuthToken({ refreshToken })
+            .finally(
+                () => (IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID] = null)
+            );
+        accessToken = (await IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID])!
+            .access_token;
+        // TODO: store new access token if qredo is connected
+        IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID] = null;
+    } else {
+        accessToken = (await IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID])!
+            .access_token;
+    }
+    return {
+        id: pendingRequest.id,
+        service: pendingRequest.service,
+        apiUrl: pendingRequest.apiUrl,
+        authToken: accessToken,
+    };
+}

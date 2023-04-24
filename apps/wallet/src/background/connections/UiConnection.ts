@@ -4,7 +4,7 @@
 import { BehaviorSubject, filter, switchMap, takeUntil } from 'rxjs';
 
 import NetworkEnv from '../NetworkEnv';
-import { getAllUIQredoPendingRequests } from '../qredo';
+import { getUIQredoInfo, getUIQredoPendingRequest } from '../qredo';
 import { Connection } from './Connection';
 import { createMessage } from '_messages';
 import { type ErrorPayload, isBasePayload } from '_payloads';
@@ -146,16 +146,34 @@ export class UiConnection extends Connection {
             } else if (isSetNetworkPayload(payload)) {
                 await NetworkEnv.setActiveNetwork(payload.network);
                 this.send(createMessage({ type: 'done' }, id));
-            } else if (isQredoConnectPayload(payload, 'getPendingRequests')) {
+            } else if (isQredoConnectPayload(payload, 'getPendingRequest')) {
                 this.send(
                     createMessage<
-                        QredoConnectPayload<'getPendingRequestsResponse'>
+                        QredoConnectPayload<'getPendingRequestResponse'>
                     >(
                         {
                             type: 'qredo-connect',
-                            method: 'getPendingRequestsResponse',
+                            method: 'getPendingRequestResponse',
                             args: {
-                                requests: await getAllUIQredoPendingRequests(),
+                                request: await getUIQredoPendingRequest(
+                                    payload.args.requestID
+                                ),
+                            },
+                        },
+                        msg.id
+                    )
+                );
+            } else if (isQredoConnectPayload(payload, 'getQredoInfo')) {
+                this.send(
+                    createMessage<QredoConnectPayload<'getQredoInfoResponse'>>(
+                        {
+                            type: 'qredo-connect',
+                            method: 'getQredoInfoResponse',
+                            args: {
+                                qredoInfo: await getUIQredoInfo(
+                                    payload.args.qredoID,
+                                    payload.args.refreshAccessToken
+                                ),
                             },
                         },
                         msg.id

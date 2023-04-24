@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { Heading } from '../../shared/heading';
 import { PageMainLayoutTitle } from '../../shared/page-main-layout/PageMainLayoutTitle';
@@ -22,6 +22,7 @@ export function QredoConnectInfoPage() {
         [data]
     );
     const [isUntrustedAccepted, setIsUntrustedAccepted] = useState(false);
+    const navigate = useNavigate();
     if (isLoading) {
         return null;
     }
@@ -44,7 +45,7 @@ export function QredoConnectInfoPage() {
                         if (showUntrustedWarning) {
                             setIsUntrustedAccepted(true);
                         } else {
-                            // TODO: go to import accounts
+                            navigate('./select', { state: { reviewed: true } });
                         }
                     } else {
                         window.close();

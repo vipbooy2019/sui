@@ -19,3 +19,10 @@ export type UIQredoPendingRequest = Pick<
     QredoConnectPendingRequest,
     'id' | 'service' | 'apiUrl' | 'origin' | 'originFavIcon'
 > & { partialToken: `…${string}` };
+
+export type UIQredoInfo = {
+    id: string;
+    authToken: string;
+    apiUrl: string;
+    service: string;
+};
