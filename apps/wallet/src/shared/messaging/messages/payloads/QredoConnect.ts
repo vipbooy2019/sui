@@ -34,6 +34,8 @@ export function isQredoConnectPayload<M extends keyof Methods>(
         isBasePayload(payload) &&
         payload.type === 'qredo-connect' &&
         'method' in payload &&
-        payload.method === method
+        payload.method === method &&
+        'args' in payload &&
+        !!payload.args
     );
 }
