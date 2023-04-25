@@ -1,9 +1,10 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { forcePersistQueryClientSave } from '../../helpers/queryClient';
 import { Heading } from '../../shared/heading';
 import { PageMainLayoutTitle } from '../../shared/page-main-layout/PageMainLayoutTitle';
 import { Text } from '../../shared/text';
@@ -23,11 +24,17 @@ export function QredoConnectInfoPage() {
     );
     const [isUntrustedAccepted, setIsUntrustedAccepted] = useState(false);
     const navigate = useNavigate();
+    useEffect(() => {
+        if (!isLoading && !data) {
+            // wait for cache to be updated and then close the window
+            // to avoid keeping in cache any deleted pending qredo request
+            forcePersistQueryClientSave().finally(() => window.close());
+        }
+    }, [isLoading, data]);
     if (isLoading) {
         return null;
     }
     if (!data) {
-        window.close();
         return null;
     }
     const showUntrustedWarning = isUntrusted && !isUntrustedAccepted;

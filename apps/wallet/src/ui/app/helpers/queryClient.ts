@@ -5,6 +5,7 @@ import { QueryClient } from '@tanstack/react-query';
 import {
     type PersistedClient,
     type Persister,
+    persistQueryClientSave,
 } from '@tanstack/react-query-persist-client';
 import { get, set, del } from 'idb-keyval';
 
@@ -30,7 +31,7 @@ export const queryClient = new QueryClient({
 function createIDBPersister(idbValidKey: IDBValidKey) {
     return {
         persistClient: async (client: PersistedClient) => {
-            set(idbValidKey, client);
+            await set(idbValidKey, client);
         },
         restoreClient: async () => {
             return await get<PersistedClient>(idbValidKey);
@@ -42,3 +43,7 @@ function createIDBPersister(idbValidKey: IDBValidKey) {
 }
 
 export const persister = createIDBPersister('queryClient.v1');
+
+export function forcePersistQueryClientSave() {
+    return persistQueryClientSave({ queryClient, persister });
+}

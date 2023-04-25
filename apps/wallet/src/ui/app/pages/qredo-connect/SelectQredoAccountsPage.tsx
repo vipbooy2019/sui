@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { ArrowRight16 } from '@mysten/icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import {
     useParams,
@@ -11,6 +11,7 @@ import {
     useNavigate,
 } from 'react-router-dom';
 
+import { forcePersistQueryClientSave } from '../../helpers/queryClient';
 import { Button } from '../../shared/ButtonUI';
 import { SelectQredoAccountsSummaryCard } from './components/SelectQredoAccountsSummaryCard';
 import { useQredoUIPendingRequest } from './hooks';
@@ -31,11 +32,18 @@ export function SelectQredoAccountsPage() {
 
     const [selectedAccounts, setSelectedAccounts] = useState<Wallet[]>([]);
     const [showPassword, setShowPassword] = useState(false);
+    const shouldCloseWindow = (!isQredoRequestLoading && !qredoRequest) || !id;
+    useEffect(() => {
+        if (shouldCloseWindow) {
+            // wait for cache to be updated and then close the window
+            // to avoid keeping in cache any deleted pending qredo request
+            forcePersistQueryClientSave().finally(() => window.close());
+        }
+    }, [shouldCloseWindow]);
     if (qredoRequest && !qredoRequestReviewed) {
         return <Navigate to="../" replace relative="path" />;
     }
-    if ((!isQredoRequestLoading && !qredoRequest) || !id) {
-        window.close();
+    if (shouldCloseWindow) {
         return null;
     }
     return (
