@@ -37,8 +37,8 @@ export function QredoAccountItem({
                 </Text>
                 {labels.length ? (
                     <div className="flex flex-row gap-1 flex-wrap">
-                        {labels.map(({ key, name, value }) => (
-                            <BadgeLabel key={key} label={`${name}: ${value}`} />
+                        {labels.map(({ key, value }) => (
+                            <BadgeLabel key={key} label={value} />
                         ))}
                     </div>
                 ) : null}
