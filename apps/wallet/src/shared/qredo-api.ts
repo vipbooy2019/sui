@@ -90,14 +90,14 @@ export class QredoAPI {
 
     public createAuthToken({
         refreshToken,
-        grantType,
+        grantType = 'refresh_token',
     }: AuthTokenParams): Promise<AuthTokenResponse> {
         const params = new FormData();
         params.append('refresh_token', refreshToken);
         if (grantType) {
             params.append('grant_type', grantType);
         }
-        return this.#request(`${this.baseURL}sui/token`, {
+        return this.#request(`${this.baseURL}connect/sui/token`, {
             method: 'post',
             body: params,
         });
@@ -112,7 +112,9 @@ export class QredoAPI {
         }
         const searchQuery = searchParams.toString();
         return this.#request(
-            `${this.baseURL}sui/wallets${searchQuery ? `?${searchQuery}` : ''}`
+            `${this.baseURL}connect/sui/wallets${
+                searchQuery ? `?${searchQuery}` : ''
+            }`
         );
     }
 
@@ -121,7 +123,13 @@ export class QredoAPI {
         let tries = 0;
         while (tries++ <= 1) {
             // TODO: add monitoring?
-            const response = await fetch(...params);
+            const response = await fetch(params[0], {
+                ...params[1],
+                headers: {
+                    ...params[1]?.headers,
+                    Authorization: `Bearer ${this.#authToken}`,
+                },
+            });
             const dataJson = await response.json();
             if (response.ok) {
                 return dataJson;
