@@ -63,6 +63,8 @@ export function SelectQredoAccountsPage() {
                             );
                             navigate('/tokens?menu=/accounts');
                         }}
+                        background
+                        spacing
                     />
                 </div>
             ) : (
