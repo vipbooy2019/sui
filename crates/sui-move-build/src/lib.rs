@@ -15,6 +15,7 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_bytecode_utils::{layout::SerdeLayoutBuilder, module_cache::GetModule};
+use move_bytecode_verifier::{meter::BoundMeter, VerifierConfig};
 use move_compiler::{
     compiled_unit::{
         AnnotatedCompiledModule, AnnotatedCompiledScript, CompiledUnitEnum, NamedCompiledModule,
@@ -194,17 +195,19 @@ pub fn build_from_resolution_graph(
     };
     let compiled_modules = package.root_modules_map();
     if run_bytecode_verifier {
+        let config = VerifierConfig::default();
+        let mut meter = BoundMeter::new(&config);
         for m in compiled_modules.iter_modules() {
-            move_bytecode_verifier::verify_module_unmetered(m).map_err(|err| {
-                SuiError::ModuleVerificationFailure {
+            move_bytecode_verifier::verify_module_with_config_metered(&config, m, &mut meter)
+                .map_err(|err| SuiError::ModuleVerificationFailure {
                     error: err.to_string(),
-                }
-            })?;
+                })?;
             // TODO make this configurable
-            sui_bytecode_verifier::sui_verify_module_unmetered(
+            sui_bytecode_verifier::sui_verify_module_metered(
                 &ProtocolConfig::get_for_version(ProtocolVersion::MAX),
                 m,
                 &fn_info,
+                &mut meter,
             )?;
         }
         // TODO(https://github.com/MystenLabs/sui/issues/69): Run Move linker
