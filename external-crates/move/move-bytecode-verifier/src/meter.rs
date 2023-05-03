@@ -99,6 +99,10 @@ impl Bounds {
             if new_units > max {
                 // TODO: change to a new status PROGRAM_TOO_COMPLEX once this is rolled out. For
                 // now we use an existing code to avoid breaking changes on potential rollback.
+                panic!(
+                    "program too complex (in `{}` with `{} current + {} new > {} max`)",
+                    self.name, self.units, units, max
+                );
                 return Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
                     .with_message(format!(
                         "program too complex (in `{}` with `{} current + {} new > {} max`)",
