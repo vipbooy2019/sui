@@ -5,7 +5,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use anyhow::Result;
 use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
-use move_bytecode_verifier::meter::Meter;
+use move_bytecode_verifier::meter::{Meter, Scope};
 use move_bytecode_verifier::{verify_module_with_config_metered, VerifierConfig};
 use move_core_types::{account_address::AccountAddress, vm_status::StatusCode};
 pub use move_vm_runtime::move_vm::MoveVM;
@@ -204,6 +204,7 @@ pub fn run_metered_move_bytecode_verifier_impl(
 ) -> Result<(), SuiError> {
     // run the Move verifier
     for module in modules.iter() {
+        meter.enter_scope(module.name().as_str(), Scope::Module);
         if let Err(e) = verify_module_with_config_metered(verifier_config, module, meter) {
             // Check that the status indicates mtering timeout
             // TODO: currently the Move verifier emits `CONSTRAINT_NOT_SATISFIED` for various failures including metering timeout
