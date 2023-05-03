@@ -26,7 +26,6 @@ pub(crate) enum LocalState {
 use crate::meter::{Meter, Scope};
 use LocalState::*;
 
-pub(crate) const STEP_BASE_COST: u128 = 15;
 pub(crate) const RET_PER_LOCAL_COST: u128 = 30;
 pub(crate) const JOIN_BASE_COST: u128 = 10;
 pub(crate) const JOIN_PER_LOCAL_COST: u128 = 5;

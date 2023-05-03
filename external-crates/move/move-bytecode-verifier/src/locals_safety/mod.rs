@@ -10,7 +10,7 @@ mod abstract_state;
 
 use crate::{
     absint::{AbstractInterpreter, TransferFunctions},
-    locals_safety::abstract_state::{RET_PER_LOCAL_COST, STEP_BASE_COST},
+    locals_safety::abstract_state::RET_PER_LOCAL_COST,
     meter::{Meter, Scope},
 };
 use abstract_state::{AbstractState, LocalState};
@@ -36,7 +36,6 @@ fn execute_inner(
     offset: CodeOffset,
     meter: &mut impl Meter,
 ) -> PartialVMResult<()> {
-    meter.add(Scope::Function, STEP_BASE_COST)?;
     match bytecode {
         Bytecode::StLoc(idx) => match state.local_state(*idx) {
             LocalState::MaybeAvailable | LocalState::Available
