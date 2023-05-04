@@ -11,7 +11,7 @@ import {
     useNavigate,
 } from 'react-router-dom';
 
-import { forcePersistQueryClientSave } from '../../helpers/queryClient';
+import { useBackgroundClient } from '../../hooks/useBackgroundClient';
 import { Button } from '../../shared/ButtonUI';
 import { SelectQredoAccountsSummaryCard } from './components/SelectQredoAccountsSummaryCard';
 import { useQredoUIPendingRequest } from './hooks';
@@ -23,24 +23,25 @@ export function SelectQredoAccountsPage() {
     const { id } = useParams();
     const { state } = useLocation();
     const navigate = useNavigate();
+    const backgroundService = useBackgroundClient();
     const qredoRequestReviewed = !!state?.reviewed;
-    const { data: qredoRequest, isLoading: isQredoRequestLoading } =
+    const { data: qredoPendingRequest, isLoading: isQredoRequestLoading } =
         useQredoUIPendingRequest(id);
     // do not call the api if user has not clicked continue in Qredo Connect Info page
     const fetchAccountsEnabled =
-        !isQredoRequestLoading && (!qredoRequest || qredoRequestReviewed);
+        !isQredoRequestLoading &&
+        (!qredoPendingRequest || qredoRequestReviewed);
 
     const [selectedAccounts, setSelectedAccounts] = useState<Wallet[]>([]);
     const [showPassword, setShowPassword] = useState(false);
-    const shouldCloseWindow = (!isQredoRequestLoading && !qredoRequest) || !id;
+    const shouldCloseWindow =
+        (!isQredoRequestLoading && !qredoPendingRequest) || !id;
     useEffect(() => {
         if (shouldCloseWindow) {
-            // wait for cache to be updated and then close the window
-            // to avoid keeping in cache any deleted pending qredo request
-            forcePersistQueryClientSave().finally(() => window.close());
+            window.close();
         }
     }, [shouldCloseWindow]);
-    if (qredoRequest && !qredoRequestReviewed) {
+    if (qredoPendingRequest && !qredoRequestReviewed) {
         return <Navigate to="../" replace relative="path" />;
     }
     if (shouldCloseWindow) {
@@ -54,8 +55,12 @@ export function SelectQredoAccountsPage() {
                         title="Import Accounts"
                         continueLabel="Import"
                         onBackClicked={() => setShowPassword(false)}
-                        onPasswordVerified={(password) => {
-                            // TODO: accept/store qredo connection
+                        onPasswordVerified={async (password) => {
+                            await backgroundService.acceptQredoConnection({
+                                qredoID: id,
+                                accounts: selectedAccounts,
+                                password,
+                            });
                             toast.success(
                                 `Qredo account${
                                     selectedAccounts.length > 1 ? 's' : ''

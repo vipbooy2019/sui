@@ -20,6 +20,9 @@ export function AccountBadge({ accountType }: AccountBadgeProps) {
         case AccountType.DERIVED:
             badgeText = null;
             break;
+        case AccountType.QREDO:
+            badgeText = 'Qredo';
+            break;
         default:
             throw new Error(`Encountered unknown account type ${accountType}`);
     }

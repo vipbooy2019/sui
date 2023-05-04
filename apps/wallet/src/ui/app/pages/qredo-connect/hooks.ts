@@ -17,6 +17,7 @@ export function useQredoUIPendingRequest(requestID?: string) {
         // events from background service will update this key (when qredo pending requests change)
         staleTime: Infinity,
         enabled: !!requestID,
+        meta: { skipPersistedCache: true },
     });
 }
 

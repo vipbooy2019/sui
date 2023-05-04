@@ -10,17 +10,30 @@ import {
     getFromSessionStorage,
     isSessionStorageSupported,
     addSessionStorageEventListener,
+    getFromLocalStorage,
+    setToLocalStorage,
 } from '../storage-utils';
-import { toUIQredoPendingRequest } from './utils';
+import { isSameQredoConnection, toUIQredoPendingRequest } from './utils';
 
 import type {
     QredoConnectPendingRequest,
-    QredoConnectRequestIdentity,
+    QredoConnectIdentity,
+    QredoConnection,
 } from './types';
 
 const SESSION_STORAGE_KEY = 'qredo-connect-requests';
+const STORAGE_ACCEPTED_CONNECTIONS_KEY = 'qredo-connections';
+
+function sessionStorageAssert() {
+    if (!isSessionStorageSupported()) {
+        throw new Error(
+            'Session storage is required. Please update your browser'
+        );
+    }
+}
 
 export async function getAllPendingRequests() {
+    sessionStorageAssert();
     return (
         (await getFromSessionStorage<QredoConnectPendingRequest[]>(
             SESSION_STORAGE_KEY,
@@ -29,39 +42,24 @@ export async function getAllPendingRequests() {
     );
 }
 
-export async function getPendingRequest(
-    requestIdentity: QredoConnectRequestIdentity | string
+export function storeAllPendingRequests(
+    requests: QredoConnectPendingRequest[]
 ) {
-    if (!isSessionStorageSupported()) {
-        throw new Error(
-            'Session storage is required. Please update your browser'
-        );
-    }
-    const allPendingRequests = await getAllPendingRequests();
+    sessionStorageAssert();
+    return setToSessionStorage(SESSION_STORAGE_KEY, requests);
+}
+
+export async function getPendingRequest(
+    requestIdentity: QredoConnectIdentity | string
+) {
     return (
-        allPendingRequests.find(
-            (aRequest) =>
-                (typeof requestIdentity === 'string' &&
-                    aRequest.id === requestIdentity) ||
-                (typeof requestIdentity === 'object' &&
-                    requestIdentity.apiUrl === aRequest.apiUrl &&
-                    requestIdentity.origin === aRequest.origin &&
-                    requestIdentity.service === aRequest.service) ||
-                false
+        (await getAllPendingRequests()).find((aRequest) =>
+            isSameQredoConnection(requestIdentity, aRequest)
         ) || null
     );
 }
 
-export function storePendingRequests(requests: QredoConnectPendingRequest[]) {
-    return setToSessionStorage(SESSION_STORAGE_KEY, requests);
-}
-
 export async function storePendingRequest(request: QredoConnectPendingRequest) {
-    if (!isSessionStorageSupported()) {
-        throw new Error(
-            'Session storage is required. Please update your browser'
-        );
-    }
     const allPendingRequests = await getAllPendingRequests();
     const existingIndex = allPendingRequests.findIndex(
         (aRequest) => aRequest.id === request.id
@@ -71,16 +69,28 @@ export async function storePendingRequest(request: QredoConnectPendingRequest) {
     } else {
         allPendingRequests.push(request);
     }
-    await storePendingRequests(allPendingRequests);
+    await storeAllPendingRequests(allPendingRequests);
 }
 
+export async function deletePendingRequest(
+    request: QredoConnectPendingRequest
+) {
+    await storeAllPendingRequests(
+        (await getAllPendingRequests()).filter(({ id }) => request.id !== id)
+    );
+}
+
+// use id for existing stored connection to make sure we override it
 export async function createPendingRequest(
-    options: Omit<QredoConnectPendingRequest, 'id' | 'messageIDs' | 'windowID'>,
+    options: Omit<
+        QredoConnectPendingRequest,
+        'id' | 'messageIDs' | 'windowID'
+    > & { id?: string },
     messageID: string
 ) {
     const newRequest: QredoConnectPendingRequest = {
-        id: uuid(),
         ...options,
+        id: options.id || uuid(),
         windowID: null,
         messageIDs: [messageID],
     };
@@ -117,6 +127,41 @@ export async function updatePendingRequest(
     await storePendingRequest(request);
 }
 
+export async function getAllQredoConnections() {
+    return (
+        (await getFromLocalStorage<QredoConnection[]>(
+            STORAGE_ACCEPTED_CONNECTIONS_KEY,
+            []
+        )) || []
+    );
+}
+
+export function storeAllQredoConnections(qredoConnections: QredoConnection[]) {
+    return setToLocalStorage<QredoConnection[]>(
+        STORAGE_ACCEPTED_CONNECTIONS_KEY,
+        qredoConnections
+    );
+}
+
+export async function getQredoConnection(
+    identity: QredoConnectIdentity | string
+) {
+    return (
+        (await getAllQredoConnections()).find((aConnection) =>
+            isSameQredoConnection(identity, aConnection)
+        ) || null
+    );
+}
+
+export async function storeQredoConnection(qredoConnection: QredoConnection) {
+    const allConnections = await getAllQredoConnections();
+    const newConnections = allConnections.filter(
+        (aConnection) => !isSameQredoConnection(qredoConnection.id, aConnection)
+    );
+    newConnections.push(qredoConnection);
+    await storeAllQredoConnections(newConnections);
+}
+
 const debouncedUIPendingQredoUpdate = debounce(
     100,
     (connections: Connections, newValue: QredoConnectPendingRequest[]) => {
@@ -136,5 +181,11 @@ export function registerForQredoChanges(connections: Connections) {
             );
         }
         // TODO notify for qredo accepted connections changes
+        if (STORAGE_ACCEPTED_CONNECTIONS_KEY in changes) {
+            console.log(
+                'qredo connections changed',
+                changes[STORAGE_ACCEPTED_CONNECTIONS_KEY]
+            );
+        }
     });
 }

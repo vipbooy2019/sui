@@ -163,6 +163,22 @@ class VaultStorageClass {
         return this.#vault?.importedKeypairs || null;
     }
 
+    public async storeQredoToken(
+        qredoID: string,
+        token: string,
+        password: string
+    ) {
+        if (!this.#vault) {
+            throw new Error('Error, vault is locked. Unlock the vault first.');
+        }
+        if (!(await this.verifyPassword(password))) {
+            throw new Error('Error, wrong password');
+        }
+        this.#vault.qredoTokens.set(qredoID, token);
+        await setToLocalStorage(VAULT_KEY, await this.#vault.encrypt(password));
+        await this.updateSessionStorage();
+    }
+
     private async updateSessionStorage() {
         if (!this.#vault || !isSessionStorageSupported()) {
             return;

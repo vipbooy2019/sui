@@ -377,6 +377,7 @@ export class BackgroundClient {
     }
 
     public fetchPendingQredoConnectRequest(requestID: string) {
+        console.log('fetchPendingQredoConnectRequest');
         return lastValueFrom(
             this.sendMessage(
                 createMessage<QredoConnectPayload<'getPendingRequest'>>({
@@ -424,6 +425,20 @@ export class BackgroundClient {
                     );
                 })
             )
+        );
+    }
+
+    public acceptQredoConnection(
+        args: QredoConnectPayload<'acceptQredoConnection'>['args']
+    ) {
+        return lastValueFrom(
+            this.sendMessage(
+                createMessage<QredoConnectPayload<'acceptQredoConnection'>>({
+                    type: 'qredo-connect',
+                    method: 'acceptQredoConnection',
+                    args,
+                })
+            ).pipe(take(1))
         );
     }
 

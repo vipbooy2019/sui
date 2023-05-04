@@ -40,13 +40,11 @@ export type Wallet = {
     walletID: string;
     address: string;
     network: string;
-    labels: [
-        {
-            key: string;
-            name: string;
-            value: string;
-        }
-    ];
+    labels: {
+        key: string;
+        name: string;
+        value: string;
+    }[];
 };
 
 export type GetWalletsResponse = {

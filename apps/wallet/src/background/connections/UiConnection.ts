@@ -4,7 +4,11 @@
 import { BehaviorSubject, filter, switchMap, takeUntil } from 'rxjs';
 
 import NetworkEnv from '../NetworkEnv';
-import { getUIQredoInfo, getUIQredoPendingRequest } from '../qredo';
+import {
+    acceptQredoConnection,
+    getUIQredoInfo,
+    getUIQredoPendingRequest,
+} from '../qredo';
 import { Connection } from './Connection';
 import { createMessage } from '_messages';
 import { type ErrorPayload, isBasePayload } from '_payloads';
@@ -179,6 +183,11 @@ export class UiConnection extends Connection {
                         msg.id
                     )
                 );
+            } else if (
+                isQredoConnectPayload(payload, 'acceptQredoConnection')
+            ) {
+                await acceptQredoConnection(payload.args);
+                this.send(createMessage({ type: 'done' }, id));
             }
         } catch (e) {
             this.send(

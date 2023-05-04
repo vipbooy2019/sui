@@ -4,6 +4,8 @@
 import Browser from 'webextension-polyfill';
 
 import {
+    type QredoConnectIdentity,
+    type QredoConnection,
     type QredoConnectPendingRequest,
     type UIQredoPendingRequest,
 } from './types';
@@ -58,4 +60,17 @@ export function toUIQredoPendingRequest(
         originFavIcon: stored.originFavIcon,
         partialToken: `…${stored.token.slice(-8)}`,
     };
+}
+
+export function isSameQredoConnection<T1 extends QredoConnectIdentity | string>(
+    a: T1,
+    b: QredoConnectPendingRequest | QredoConnection
+) {
+    return (
+        (typeof a === 'string' && b.id === a) ||
+        (typeof a === 'object' &&
+            a.apiUrl === b.apiUrl &&
+            a.origin === b.origin &&
+            a.service === b.service)
+    );
 }

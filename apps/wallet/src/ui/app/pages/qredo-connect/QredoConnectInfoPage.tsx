@@ -4,7 +4,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { forcePersistQueryClientSave } from '../../helpers/queryClient';
 import { Heading } from '../../shared/heading';
 import { PageMainLayoutTitle } from '../../shared/page-main-layout/PageMainLayoutTitle';
 import { Text } from '../../shared/text';
@@ -26,9 +25,8 @@ export function QredoConnectInfoPage() {
     const navigate = useNavigate();
     useEffect(() => {
         if (!isLoading && !data) {
-            // wait for cache to be updated and then close the window
-            // to avoid keeping in cache any deleted pending qredo request
-            forcePersistQueryClientSave().finally(() => window.close());
+            console.log('data empty', data, 'close window');
+            //window.close();
         }
     }, [isLoading, data]);
     if (isLoading) {

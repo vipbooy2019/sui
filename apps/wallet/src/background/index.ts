@@ -79,10 +79,15 @@ const keyringStatusCallback = () => {
         event: 'lockStatusUpdate',
         isLocked: Keyring.isLocked,
     });
+    console.log(Keyring.getAccounts());
 };
 Keyring.on('lockedStatusUpdate', keyringStatusCallback);
 Keyring.on('accountsChanged', keyringStatusCallback);
 Keyring.on('activeAccountChanged', keyringStatusCallback);
+
+Keyring.on('accountsChanged', async (accounts) => {
+    await Permissions.ensurePermissionAccountsUpdated(accounts);
+});
 
 Browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === LOCK_ALARM_NAME) {
@@ -126,7 +131,19 @@ NetworkEnv.on('changed', async (network) => {
 });
 
 Browser.windows.onRemoved.addListener(async (id) => {
-    await Qredo.handleOnWindowClosed(id, connections);
+    await Qredo.handleOnWindowClosed(id);
 });
 
 Qredo.registerForQredoChanges(connections);
+Qredo.onQredoEvent('onConnectionResponse', ({ allowed, request }) => {
+    request.messageIDs.forEach((aMessageID) => {
+        connections.notifyContentScript(
+            {
+                event: 'qredoConnectResult',
+                origin: request.origin,
+                allowed,
+            },
+            aMessageID
+        );
+    });
+});

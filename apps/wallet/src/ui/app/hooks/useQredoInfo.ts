@@ -12,6 +12,10 @@ export function useQredoInfo(qredoID?: string) {
         async () => backgroundClient.getQredoApiInfo(qredoID!),
         // staleTime: Infinity because background service sends updates when qredo info changes
         // and background client updates the query data
-        { enabled: !!qredoID, staleTime: Infinity }
+        {
+            enabled: !!qredoID,
+            staleTime: Infinity,
+            meta: { skipPersistedCache: true },
+        }
     );
 }
