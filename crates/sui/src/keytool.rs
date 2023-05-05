@@ -3,12 +3,20 @@
 use anyhow::anyhow;
 use bip32::DerivationPath;
 use clap::*;
+use fastcrypto::ed25519::Ed25519KeyPair;
 use fastcrypto::encoding::{decode_bytes_hex, Base64, Encoding, Hex};
 use fastcrypto::hash::HashFunction;
 use fastcrypto::traits::KeyPair;
-use shared_crypto::intent::{Intent, IntentMessage};
+use fastcrypto_zkp::bn254::api::Bn254Fr;
+use fastcrypto_zkp::bn254::poseidon::PoseidonWrapper;
+use fastcrypto_zkp::bn254::zk_login::{big_int_str_to_hash, AuxInputs, ProofPoints, PublicInputs};
+use num_bigint::{BigInt, Sign};
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+use shared_crypto::intent::{Intent, IntentMessage, IntentScope};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use sui_keys::key_derive::generate_new_key;
 use sui_keys::keypair_file::{
     read_authority_keypair_from_file, read_keypair_from_file, write_authority_keypair_to_file,
@@ -16,11 +24,14 @@ use sui_keys::keypair_file::{
 };
 use sui_keys::keystore::{AccountKeystore, Keystore};
 use sui_types::base_types::SuiAddress;
-use sui_types::crypto::{get_authority_key_pair, EncodeDecodeBase64, SignatureScheme, SuiKeyPair};
+use sui_types::crypto::{
+    get_authority_key_pair, get_key_pair_from_rng, EncodeDecodeBase64, SignatureScheme, SuiKeyPair,
+};
 use sui_types::crypto::{DefaultHash, PublicKey, Signature};
 use sui_types::messages::TransactionData;
 use sui_types::multisig::{MultiSig, MultiSigPublicKey, ThresholdUnit, WeightUnit};
 use sui_types::signature::GenericSignature;
+use sui_types::zk_login_authenticator::{OAuthProviderContent, ZkLoginAuthenticator};
 use tracing::info;
 #[cfg(test)]
 #[path = "unit_tests/keytool_tests.rs"]
@@ -152,6 +163,30 @@ pub enum KeyToolCommand {
     /// Encodes an array of bytes to its Base64 string representation.
     BytesToBase64 {
         bytes: Vec<u8>,
+    },
+
+    /// Step
+    ZkLogInPrepare {
+        #[clap(long)]
+        max_epoch: String,
+    },
+
+    GenerateZkLoginAddress {
+        #[clap(long)]
+        sub_id_com: String,
+        #[clap(long)]
+        iss: String,
+    },
+
+    SerializeZkLoginAuthenticator {
+        #[clap(long)]
+        proof_points_path: PathBuf,
+        #[clap(long)]
+        public_inputs_path: PathBuf,
+        #[clap(long)]
+        aux_inputs_path: PathBuf,
+        #[clap(long)]
+        user_signature: String,
     },
 }
 
@@ -389,6 +424,91 @@ impl KeyToolCommand {
                 println!("MultiSig address: {address}");
                 println!("MultiSig parsed: {:?}", generic_sig);
                 println!("MultiSig serialized: {:?}", generic_sig.encode_base64());
+            }
+
+            KeyToolCommand::ZkLogInPrepare { max_epoch } => {
+                // todo: use a real rng here
+                // todo: unhardcode max epoch 10000
+                let kp: Ed25519KeyPair = get_key_pair_from_rng(&mut StdRng::from_seed([0; 32])).1;
+
+                let skp = SuiKeyPair::Ed25519(kp.copy());
+                println!("Ephemeral pubkey: {:?}", skp.public().encode_base64());
+                println!("Ephemeral keypair: {:?}", skp.encode_base64());
+
+                let bytes = kp.public().as_ref();
+                let (first_half, second_half) = bytes.split_at(bytes.len() / 2);
+                let first_bigint = BigInt::from_bytes_be(Sign::Plus, first_half);
+                let second_bigint = BigInt::from_bytes_be(Sign::Plus, second_half);
+
+                // Calculate the poseidon hash of 4 fields: eph_pub_key[0], eph_pub_key[1], max_epoch, randomness.
+                let mut poseidon = PoseidonWrapper::new(4);
+                let first = Bn254Fr::from_str(&first_bigint.to_string()).unwrap();
+                let second = Bn254Fr::from_str(&second_bigint.to_string()).unwrap();
+                println!("first: {:?}", first.to_string());
+                println!("second: {:?}", second.to_string());
+                let max_epoch = Bn254Fr::from_str(max_epoch.as_str()).unwrap();
+                // todo: generate true randomness here
+                let randomness = Bn254Fr::from_str(
+                    "50683480294434968413708503290439057629605340925620961559740848568164438166",
+                )
+                .unwrap();
+                let hash = poseidon.hash(&[first, second, max_epoch, randomness]);
+                println!("Nonce: {:?}", hash.to_string());
+            }
+
+            KeyToolCommand::GenerateZkLoginAddress { sub_id_com, iss } => {
+                let mut hasher = DefaultHash::default();
+                hasher.update([SignatureScheme::ZkLoginAuthenticator.flag()]);
+                hasher.update(big_int_str_to_hash(&sub_id_com));
+                hasher.update(iss.as_bytes());
+                println!(
+                    "Sui Address: {:?}",
+                    SuiAddress::from_bytes(hasher.finalize().digest)?
+                );
+            }
+
+            KeyToolCommand::SerializeZkLoginAuthenticator {
+                proof_points_path,
+                public_inputs_path,
+                aux_inputs_path,
+                user_signature,
+            } => {
+                // User retrieves from bulletin content and signature from smart contract. Here we hardcode for now.
+                let example_bulletin = vec![
+                    OAuthProviderContent::new(
+                        "https://accounts.google.com".to_string(),
+                        "RSA".to_string(),
+                        "c9afda3682ebf09eb3055c1c4bd39b751fbf8195".to_string(),
+                        "AQAB".to_string(),
+                        "t0VFy4n4MGtbMWJKk5qfCY2WGBja2WSWQ2zsLziSx9p1QE0QgXtr1x85PnQYaYrAvOBiXm2mrxWnZ42MxaUUu9xyykTDxsNWHK--ufchdaqJwfqd5Ecu-tHvFkMIs2g39pmG8QfXJHKMqczKrvcHHJrpTqZuos1uhYM9gxOLVP8wTAUPNqa1caiLbsszUC7yaMO3LY1WLQST79Z8u5xttKXShXFv1CCNs8-7vQ1IB5DWQSR2um1KV4t42d31Un4-8cNiURx9HmJNJzOXbTG-vDeD6sapFf5OGDsCLO4YvzzkzTsYBIQy_p88qNX0a6AeU13enxhbasSc-ApPqlxBdQ".to_string(),
+                        "RS256".to_string(),
+                        "575519204237-msop9ep45u2uo98hapqmngv8d84qdc8k.apps.googleusercontent.com".to_string()
+                    )
+                ];
+                let foundation_key: SuiKeyPair =
+                    SuiKeyPair::Ed25519(get_key_pair_from_rng(&mut StdRng::from_seed([0; 32])).1);
+
+                let bulletin_signature = Signature::new_secure(
+                    &IntentMessage::new(
+                        Intent::sui_app(IntentScope::PersonalMessage),
+                        example_bulletin.clone(),
+                    ),
+                    &foundation_key,
+                );
+                let public_inputs = PublicInputs::from_fp(public_inputs_path.to_str().unwrap());
+                let authenticator = ZkLoginAuthenticator::new(
+                    ProofPoints::from_fp(proof_points_path.to_str().unwrap()),
+                    public_inputs,
+                    AuxInputs::from_fp(aux_inputs_path.to_str().unwrap()).unwrap(),
+                    Signature::from_str(&user_signature).map_err(|e| anyhow!(e))?,
+                    bulletin_signature,
+                    example_bulletin,
+                );
+                let sig = GenericSignature::from(authenticator);
+                println!(
+                    "ZkLogin Authenticator Signature Serialized: {:?}",
+                    sig.encode_base64()
+                );
             }
         }
 

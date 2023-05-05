@@ -65,6 +65,7 @@ pub mod sui_serde;
 pub mod sui_system_state;
 pub mod temporary_store;
 pub mod versioned;
+pub mod zk_login_authenticator;
 
 pub mod epoch_data;
 

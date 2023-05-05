@@ -33,6 +33,7 @@ use crate::parse_sui_struct_tag;
 use crate::signature::GenericSignature;
 use crate::sui_serde::HexAccountAddress;
 use crate::sui_serde::Readable;
+use crate::zk_login_authenticator::ZkLoginAuthenticator;
 use crate::MOVE_STDLIB_ADDRESS;
 use crate::SUI_CLOCK_OBJECT_ID;
 use crate::SUI_FRAMEWORK_ADDRESS;
@@ -575,6 +576,18 @@ impl From<MultiSigPublicKey> for SuiAddress {
     }
 }
 
+/// Sui address for [struct ZkLoginAuthenticator] is defined as the hash
+/// of the four fields in the prepared verifying key.
+impl From<&ZkLoginAuthenticator> for SuiAddress {
+    fn from(authenticator: &ZkLoginAuthenticator) -> Self {
+        let mut hasher = DefaultHash::default();
+        hasher.update([SignatureScheme::ZkLoginAuthenticator.flag()]);
+        hasher.update(authenticator.get_sub_id_com_bytes());
+        hasher.update(authenticator.get_iss_bytes());
+        SuiAddress(hasher.finalize().digest)
+    }
+}
+
 impl TryFrom<&GenericSignature> for SuiAddress {
     type Error = SuiError;
     /// Derive a SuiAddress from a serialized signature in Sui [GenericSignature].
@@ -591,6 +604,7 @@ impl TryFrom<&GenericSignature> for SuiAddress {
                 SuiAddress::from(&pub_key)
             }
             GenericSignature::MultiSig(ms) => ms.multisig_pk.clone().into(),
+            GenericSignature::ZkLoginAuthenticator(zklogin) => zklogin.into(),
         })
     }
 }
