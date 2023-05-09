@@ -9,8 +9,10 @@ import {
   MoveCallTransaction,
   TRANSACTION,
   TransferObjectsTransaction,
+  // MULTISIG,
 } from '..';
 import { normalizeSuiAddress } from '../../types';
+// import { CompressedSignature, MultiSig, MultiSigPublicKey } from '../../cryptography/multisig';
 
 // Oooh-weeee we nailed it!
 it('can serialize simplified programmable call struct', () => {
@@ -166,3 +168,21 @@ it('can serialize transaction data with a programmable transaction', () => {
   const result = builder.de(type, bytes);
   expect(result).toEqual(txData);
 });
+
+// it('can serialize multisig', () => {
+//   let multisig_pk: MultiSigPublicKey = {
+//     pk_map: [ {[1], 1}, {[1], 2} ],
+//     threshold: [3, 0],
+//   };
+//   let compressed_sigs: CompressedSignature[] = [];
+//   let multisig: MultiSig = {
+//     sigs: compressed_sigs,
+//     bitmap: [0, 1],
+//     multisig_pk: multisig_pk,
+//   }; 
+  
+//   const bytes = builder.ser(MULTISIG, multisig).toBytes();
+//   const result: MultiSig = builder.de(MULTISIG, bytes);
+
+//   expect(result).toEqual(multisig);
+// });

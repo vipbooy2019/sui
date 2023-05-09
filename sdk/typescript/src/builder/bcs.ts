@@ -16,6 +16,10 @@ export const OBJECT_ARG = 'ObjectArg';
 export const PROGRAMMABLE_TX_BLOCK = 'ProgrammableTransaction';
 export const PROGRAMMABLE_CALL_INNER = 'ProgrammableMoveCall';
 export const TRANSACTION_INNER = 'Transaction';
+export const COMPRESSED_SIGNATURE_INNER = 'CompressedSignature';
+export const PUBLIC_KEY = 'PublicKey';
+export const MULTISIG_PUBLIC_KEY = 'MultiSigPublicKey';
+export const MULTISIG = 'MultiSig';
 
 export const ENUM_KIND = 'EnumKind';
 
@@ -23,6 +27,9 @@ export const ENUM_KIND = 'EnumKind';
 export const TRANSACTION: TypeName = [ENUM_KIND, TRANSACTION_INNER];
 /** Wrapper around Argument Enum to support `kind` matching in TS */
 export const ARGUMENT: TypeName = [ENUM_KIND, ARGUMENT_INNER];
+
+/** Wrapper around Compressed Enum to support `kind` matching in TS */
+export const COMPRESSED_SIGNATURE: TypeName = [ENUM_KIND, COMPRESSED_SIGNATURE_INNER];
 
 /** Custom serializer for decoding package, module, function easier */
 export const PROGRAMMABLE_CALL = 'SimpleProgrammableMoveCall';
@@ -95,8 +102,25 @@ export const builder = new BCS(bcs)
       packageId: BCS.ADDRESS,
       ticket: ARGUMENT,
     },
+  })
+  .registerEnumType(COMPRESSED_SIGNATURE_INNER, {
+    Ed25519: [VECTOR, BCS.U8],
+    Secp256k1: [VECTOR, BCS.U8],
+    Secp256r1: [VECTOR, BCS.U8],
+  })
+  // .registerStructType(MULTISIG_PK_MAP, {
+  //   pk_map: [VECTOR, BCS.STRING],
+  //   threshold: [VECTOR, BCS.U8],
+  // })
+  .registerStructType(MULTISIG_PUBLIC_KEY, {
+    pk_map: [VECTOR, BCS.STRING],
+    threshold: [VECTOR, BCS.U8],
+  })
+  .registerStructType(MULTISIG, {
+    sigs: [VECTOR, COMPRESSED_SIGNATURE],
+    bitmap: [VECTOR, BCS.U8],
+    multisig_pk: MULTISIG_PUBLIC_KEY
   });
-
 /**
  * Utilities for better decoding.
  */
