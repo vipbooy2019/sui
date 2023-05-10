@@ -123,6 +123,12 @@ impl NodeLeakDetector {
     }
 }
 
+impl Default for NodeLeakDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Drop for NodeLeakDetector {
     fn drop(&mut self) {
         NODE_COUNT.with(|c| c.fetch_sub(1, Ordering::SeqCst));
