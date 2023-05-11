@@ -122,7 +122,7 @@ pub struct ValidatorComponents {
 struct SimState {
     sim_node: sui_simulator::runtime::NodeHandle,
     sim_safe_mode_expected: AtomicBool,
-    leak_detector: sui_simulator::NodeLeakDetector,
+    _leak_detector: sui_simulator::NodeLeakDetector,
 }
 
 pub struct SuiNode {
@@ -474,7 +474,7 @@ impl SuiNode {
             sim_state: SimState {
                 sim_node: sui_simulator::runtime::NodeHandle::current(),
                 sim_safe_mode_expected: AtomicBool::new(false),
-                leak_detector: sui_simulator::NodeLeakDetector::new(),
+                _leak_detector: sui_simulator::NodeLeakDetector::new(),
             },
         };
 

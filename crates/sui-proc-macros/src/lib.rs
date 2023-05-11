@@ -201,6 +201,9 @@ pub fn sim_test(args: TokenStream, item: TokenStream) -> TokenStream {
             #sig {
                 let ret = { #body };
 
+                #[allow(unreachable_code)]
+                {
+
                 // all node handles should have been dropped after the above block exits, but task
                 // shutdown is asynchronous, so we need a brief delay before checking for leaks.
                 tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
@@ -212,6 +215,7 @@ pub fn sim_test(args: TokenStream, item: TokenStream) -> TokenStream {
                 );
 
                 ret
+                }
             }
         }
     } else {
