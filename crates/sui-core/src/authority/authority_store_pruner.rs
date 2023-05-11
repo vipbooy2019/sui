@@ -23,7 +23,7 @@ use sui_types::{
 };
 use tokio::sync::oneshot::{self, Sender};
 use tokio::time::Instant;
-use tracing::log::{debug, error};
+use tracing::{debug, error};
 use typed_store::{Map, TypedStoreError};
 
 use super::authority_store_tables::AuthorityPerpetualTables;
@@ -119,10 +119,12 @@ impl AuthorityStorePruner {
                 for (object_id, (min_version, max_version)) in updates {
                     let start_range = ObjectKey(object_id, min_version);
                     let end_range = ObjectKey(object_id, (max_version.value() + 1).into());
+                    debug!(?start_range, ?end_range, "pruner delete_range");
                     wb.delete_range(&perpetual_db.objects, &start_range, &end_range)?;
                 }
             }
             DeletionMethod::PointDelete => {
+                debug!(?object_keys_to_prune, "pruner point delete");
                 wb.delete_batch(&perpetual_db.objects, object_keys_to_prune)?;
             }
         }

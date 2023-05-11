@@ -223,8 +223,17 @@ impl TransactionManager {
             inner: RwLock::new(Inner::new(epoch_store.epoch())),
             tx_ready_certificates,
         };
+        let all_pending_execution = epoch_store.all_pending_execution().unwrap();
+        let digests = all_pending_execution
+            .iter()
+            .map(|cert| cert.digest())
+            .collect::<Vec<_>>();
+        tracing::debug!(
+            all_pending_execution = ?digests,
+            "Recovering TransactionManager from pending certificates"
+        );
         transaction_manager
-            .enqueue(epoch_store.all_pending_execution().unwrap(), epoch_store)
+            .enqueue(all_pending_execution, epoch_store)
             .expect("Initialize TransactionManager with pending certificates failed.");
         transaction_manager
     }
@@ -299,6 +308,7 @@ impl TransactionManager {
             if input_object_kinds.len() != input_object_locks.len() {
                 error!("Duplicated input objects: {:?}", input_object_kinds);
             }
+            tracing::debug!(?digest, ?input_object_locks, "Enqueueing certificate");
 
             for key in input_object_locks.keys() {
                 // Checking object availability without holding TM lock to reduce contention.

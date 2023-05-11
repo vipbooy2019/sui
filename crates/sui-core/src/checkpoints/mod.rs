@@ -586,6 +586,7 @@ impl CheckpointBuilder {
         self.metrics
             .checkpoint_roots_count
             .inc_by(pending.roots.len() as u64);
+        debug!(roots = ?pending.roots, "notify read executed effects");
         let roots = self
             .effects_store
             .notify_read_executed_effects(pending.roots)
