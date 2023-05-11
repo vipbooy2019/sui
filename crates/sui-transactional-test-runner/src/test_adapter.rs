@@ -1083,6 +1083,7 @@ impl<'a> SuiTestAdapter<'a> {
                 gas_budget,
                 self.gas_price,
                 self.protocol_config.storage_gas_price(),
+                self.protocol_config.gas_rounding_step(),
             )
         };
         // Unmetered is set in the transaction run without metering. NB that this will still keep
