@@ -1,7 +1,8 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { useOnScreen } from '@mysten/core';
+import { useGetOwnedObjectsWithKiosks, useOnScreen } from '@mysten/core';
+import { type SuiObjectData } from '@mysten/sui.js';
 import { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -11,13 +12,14 @@ import { ErrorBoundary } from '_components/error-boundary';
 import Loading from '_components/loading';
 import LoadingSpinner from '_components/loading/LoadingIndicator';
 import { NFTDisplayCard } from '_components/nft-display';
-import { useGetNFTs } from '_src/ui/app/hooks/useGetNFTs';
+import { useAppSelector } from '_src/ui/app/hooks';
 import PageTitle from '_src/ui/app/shared/PageTitle';
 
 function NftsPage() {
     const accountAddress = useActiveAddress();
+    const { apiEnv } = useAppSelector((state) => state.app);
     const {
-        data: nfts,
+        data,
         hasNextPage,
         isInitialLoading,
         isFetchingNextPage,
@@ -25,7 +27,13 @@ function NftsPage() {
         isLoading,
         fetchNextPage,
         isError,
-    } = useGetNFTs(accountAddress);
+    } = useGetOwnedObjectsWithKiosks({
+        address: accountAddress!,
+        enabled: apiEnv === 'mainnet',
+    });
+
+    const flat = data?.pages.flatMap(({ data }) => data as SuiObjectData[]);
+
     const observerElem = useRef<HTMLDivElement | null>(null);
     const { isIntersecting } = useOnScreen(observerElem);
     const isSpinnerVisible = isFetchingNextPage && hasNextPage;
@@ -35,7 +43,7 @@ function NftsPage() {
             fetchNextPage();
         }
     }, [
-        nfts.length,
+        flat?.length,
         isIntersecting,
         fetchNextPage,
         hasNextPage,
@@ -62,9 +70,9 @@ function NftsPage() {
                         <small>{(error as Error).message}</small>
                     </Alert>
                 ) : null}
-                {nfts?.length ? (
+                {flat?.length ? (
                     <div className="grid w-full grid-cols-2 gap-x-3.5 gap-y-4">
-                        {nfts.map(({ objectId }) => (
+                        {flat?.map(({ objectId }) => (
                             <Link
                                 to={`/nft-details?${new URLSearchParams({
                                     objectId,
