@@ -37,9 +37,7 @@ const MAX_PROTOCOL_VERSION: u64 = 11;
 //            `max_meter_ticks_per_module` limits each from 6_000_000 to 16_000_000. sui-system
 //            framework changes.
 // Version 11: Change NW entities to use versioned metadata field.
-#[derive(
-    Copy, Clone, Default, Debug, Hash, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord,
-)]
+#[derive(Copy, Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProtocolVersion(u64);
 
 impl ProtocolVersion {
