@@ -47,7 +47,7 @@ describe('Test Object Display Standard', () => {
       error: {
         code: 'displayError',
         error:
-          'RPC call failed: Field value idd cannot be found in struct; RPC call failed: Field value namee cannot be found in struct',
+          'Field value idd cannot be found in struct; Field value namee cannot be found in struct',
       },
     });
   });
