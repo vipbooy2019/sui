@@ -377,7 +377,6 @@ export class SuiWallet implements Wallet {
                 if (!isQredoConnectPayload(response, 'connectResponse')) {
                     throw new Error('Invalid qredo connect response');
                 }
-                console.log('qredo connect response', response.args.allowed);
                 return response.args.allowed;
             }
         );

@@ -16,19 +16,26 @@ export function useQredoAPI(qredoID?: string) {
         () => (qredoID && API_INSTANCES[qredoID]) || null
     );
     useEffect(() => {
-        if (data?.qredoInfo?.apiUrl && data?.qredoInfo?.authToken && qredoID) {
+        if (
+            data?.qredoInfo?.apiUrl &&
+            data?.qredoInfo?.accessToken &&
+            qredoID
+        ) {
             const instance = API_INSTANCES[qredoID];
             // if apiUrl changes that will mean the qredo ID will change
-            // so no need to check this cases
-            if (instance && instance.authToken !== data.qredoInfo.authToken) {
-                instance.authToken = data.qredoInfo.authToken;
+            // so no need to check this case
+            if (
+                instance &&
+                instance.accessToken !== data.qredoInfo.accessToken
+            ) {
+                instance.accessToken = data.qredoInfo.accessToken;
             } else if (!instance) {
                 API_INSTANCES[qredoID] = new QredoAPI(
                     qredoID,
                     data.qredoInfo.apiUrl,
                     {
                         backgroundClient,
-                        authToken: data.qredoInfo.authToken,
+                        accessToken: data.qredoInfo.accessToken,
                     }
                 );
             }
@@ -37,7 +44,7 @@ export function useQredoAPI(qredoID?: string) {
     }, [
         backgroundClient,
         data?.qredoInfo?.apiUrl,
-        data?.qredoInfo?.authToken,
+        data?.qredoInfo?.accessToken,
         qredoID,
     ]);
     return [api, isLoading, error] as const;

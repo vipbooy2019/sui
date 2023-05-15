@@ -15,6 +15,7 @@ import {
     getQredoConnection,
     storeAllPendingRequests,
     storeQredoConnection,
+    storeQredoConnectionAccessToken,
     updatePendingRequest,
 } from './storage';
 import { type UIQredoInfo, type QredoConnectPendingRequest } from './types';
@@ -26,7 +27,7 @@ import {
 import { type QredoConnectInput } from '_src/dapp-interface/WalletStandardInterface';
 import { type Message } from '_src/shared/messaging/messages';
 import { type QredoConnectPayload } from '_src/shared/messaging/messages/payloads/QredoConnect';
-import { type AuthTokenResponse, QredoAPI } from '_src/shared/qredo-api';
+import { type AccessTokenResponse, QredoAPI } from '_src/shared/qredo-api';
 
 const qredoEvents = mitt<{
     onConnectionResponse: {
@@ -51,7 +52,6 @@ export async function requestUserApproval(
         origin,
     };
     const existingPendingRequest = await getPendingRequest(connectionIdentity);
-    console.log({ existingPendingRequest });
     if (existingPendingRequest) {
         const qredoConnectUrl = qredoConnectPageUrl(existingPendingRequest.id);
         const changes: Parameters<typeof updatePendingRequest>['1'] = {
@@ -82,8 +82,6 @@ export async function requestUserApproval(
         await updatePendingRequest(existingPendingRequest.id, changes);
         return;
     }
-    // make sure we reuse any existing connection id so we will override it in the end
-    const existingConnection = await getQredoConnection(connectionIdentity);
     const request = await createPendingRequest(
         {
             service,
@@ -91,7 +89,7 @@ export async function requestUserApproval(
             token,
             origin,
             originFavIcon: connection.originFavIcon,
-            id: existingConnection?.id || undefined,
+            accessToken: null,
         },
         message.id
     );
@@ -132,43 +130,73 @@ export { registerForQredoChanges } from './storage';
 
 const IN_PROGRESS_ACCESS_TOKENS_RENEWALS: Record<
     string,
-    Promise<AuthTokenResponse> | null
+    Promise<AccessTokenResponse> | null
 > = {};
 
-export async function getUIQredoInfo(
+async function renewAccessToken(
     requestID: string,
-    renewAccessToken: boolean
-): Promise<UIQredoInfo | null> {
-    const pendingRequest = await getPendingRequest(requestID);
-    if (!pendingRequest) {
-        // TODO: check if is an accepted connection
-        return null;
-    }
-    // TODO implement the case we have a stored connection with existing accessToken (don't forget renewAccessToken)
-    const refreshToken = pendingRequest.token;
+    apiUrl: string,
+    refreshToken: string,
+    isPendingRequest: boolean
+) {
     let accessToken: string;
     if (!IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID]) {
         IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID] = new QredoAPI(
             requestID,
-            pendingRequest.apiUrl
+            apiUrl
         )
-            .createAuthToken({ refreshToken })
+            .createAccessToken({ refreshToken })
             .finally(
                 () => (IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID] = null)
             );
         accessToken = (await IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID])!
             .access_token;
-        // TODO: store new access token if qredo is connected
-        IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID] = null;
+        if (isPendingRequest) {
+            await updatePendingRequest(requestID, { accessToken });
+        } else {
+            await storeQredoConnectionAccessToken(requestID, accessToken);
+        }
     } else {
         accessToken = (await IN_PROGRESS_ACCESS_TOKENS_RENEWALS[requestID])!
             .access_token;
     }
+    return accessToken;
+}
+
+// This function returns the connection info for the UI and creates an access token when it doesn't exist or if is forced to be created.
+// Because pending and existing connections never have the same ID this function fetches data for either of them based on the id.
+export async function getUIQredoInfo(
+    requestID: string,
+    forceRenewAccessToken: boolean
+): Promise<UIQredoInfo | null> {
+    const pendingRequest = await getPendingRequest(requestID);
+    const existingConnection = await getQredoConnection(requestID);
+    if (!pendingRequest && !existingConnection) {
+        return null;
+    }
+    const { id, service, apiUrl } = (pendingRequest || existingConnection)!;
+    const refreshToken =
+        pendingRequest?.token ||
+        (await keyring.getQredoRefreshToken(requestID));
+    let accessToken =
+        pendingRequest?.accessToken || existingConnection?.accessToken || null;
+    if (forceRenewAccessToken || !accessToken) {
+        if (!refreshToken) {
+            return null;
+        }
+        accessToken = await renewAccessToken(
+            requestID,
+            apiUrl,
+            refreshToken,
+            !!pendingRequest
+        );
+    }
     return {
-        id: pendingRequest.id,
-        service: pendingRequest.service,
-        apiUrl: pendingRequest.apiUrl,
-        authToken: accessToken,
+        id,
+        service,
+        apiUrl,
+        accessToken: accessToken,
+        accounts: existingConnection?.accounts || [],
     };
 }
 
@@ -179,27 +207,32 @@ export async function acceptQredoConnection({
 }: QredoConnectPayload<'acceptQredoConnection'>['args']) {
     const pendingRequest = await getPendingRequest(qredoID);
     if (!pendingRequest) {
-        // TODO: handle case we update the existing connection
         throw new Error(
             `Accepting Qredo connection failed, pending request ${qredoID} not found`
         );
     }
-    const { id, apiUrl, origin, originFavIcon, service } = pendingRequest;
-    // when creating a request for a connection we use the same id if there is any stored connection with same qredo identity
-    // so setting the token to a qredoID here should override the existing one
+    const { apiUrl, origin, originFavIcon, service } = pendingRequest;
+    // make sure we replace an existing connection when it's the same
+    const existingConnection = await getQredoConnection({
+        apiUrl,
+        origin,
+        service,
+    });
+    const qredoIDToUse = existingConnection?.id || qredoID;
     await keyring.storeQredoConnection(
-        qredoID,
+        qredoIDToUse,
         pendingRequest.token,
         password,
         accounts
     );
     await storeQredoConnection({
-        id,
+        id: qredoIDToUse,
         apiUrl,
         origin,
         originFavIcon,
         service,
         accounts,
+        accessToken: null,
     });
     await deletePendingRequest(pendingRequest);
     qredoEvents.emit('onConnectionResponse', {

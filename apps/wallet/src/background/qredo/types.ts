@@ -15,6 +15,7 @@ export type QredoConnectPendingRequest = {
     token: string;
     windowID: number | null;
     messageIDs: string[];
+    accessToken: string | null;
 } & QredoConnectIdentity;
 
 export type UIQredoPendingRequest = Pick<
@@ -24,9 +25,10 @@ export type UIQredoPendingRequest = Pick<
 
 export type UIQredoInfo = {
     id: string;
-    authToken: string;
+    accessToken: string | null;
     apiUrl: string;
     service: string;
+    accounts: Wallet[];
 };
 
 export type QredoConnection = Omit<
@@ -34,4 +36,5 @@ export type QredoConnection = Omit<
     'token' | 'windowID' | 'messageIDs'
 > & {
     accounts: Wallet[];
+    accessToken: string | null;
 };

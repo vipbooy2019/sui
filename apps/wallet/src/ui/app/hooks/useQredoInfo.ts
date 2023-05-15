@@ -3,17 +3,17 @@
 
 import { useQuery } from '@tanstack/react-query';
 
+import { makeQredoConnectionInfoQueryKey } from '../pages/qredo-connect/utils';
 import { useBackgroundClient } from './useBackgroundClient';
 
 export function useQredoInfo(qredoID?: string) {
     const backgroundClient = useBackgroundClient();
     return useQuery(
-        ['qredo', 'info', qredoID],
-        async () => backgroundClient.getQredoApiInfo(qredoID!),
-        // staleTime: Infinity because background service sends updates when qredo info changes
-        // and background client updates the query data
+        makeQredoConnectionInfoQueryKey(qredoID || ''),
+        async () => backgroundClient.getQredoConnectionInfo(qredoID!),
         {
             enabled: !!qredoID,
+            // events from background service will invalidate this key (when qredo info changes)
             staleTime: Infinity,
             meta: { skipPersistedCache: true },
         }

@@ -14,7 +14,7 @@ export function useQredoUIPendingRequest(requestID?: string) {
         queryKey: makeQredoPendingRequestQueryKey(requestID!),
         queryFn: async () =>
             await backgroundClient.fetchPendingQredoConnectRequest(requestID!),
-        // events from background service will update this key (when qredo pending requests change)
+        // events from background service will invalidate this key (when qredo pending requests change)
         staleTime: Infinity,
         enabled: !!requestID,
         meta: { skipPersistedCache: true },

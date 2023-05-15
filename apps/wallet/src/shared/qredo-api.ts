@@ -25,12 +25,12 @@ export class QredoAPIError extends Error {
 
 export class QredoAPIUnauthorizedError extends QredoAPIError {}
 
-export type AuthTokenParams = {
+export type AccessTokenParams = {
     refreshToken: string;
     grantType?: string;
 };
 
-export type AuthTokenResponse = {
+export type AccessTokenResponse = {
     access_token: string;
     expires_in: number;
     token_type: string;
@@ -58,9 +58,9 @@ export type GetWalletsParams = {
 export class QredoAPI {
     readonly baseURL: string;
     readonly qredoID: string;
-    #authToken: string | null;
+    #accessToken: string | null;
     #backgroundClient: BackgroundClient | null;
-    #authTokenRenewInProgress: Promise<{
+    #accessTokenRenewInProgress: Promise<{
         qredoInfo: UIQredoInfo | null;
     }> | null = null;
 
@@ -68,28 +68,28 @@ export class QredoAPI {
         qredoID: string,
         baseURL: string,
         options: {
-            authToken?: string;
+            accessToken?: string;
             backgroundClient?: BackgroundClient;
         } = {}
     ) {
         this.qredoID = qredoID;
         this.baseURL = baseURL + (baseURL.endsWith('/') ? '' : '/');
-        this.#authToken = options.authToken || null;
+        this.#accessToken = options.accessToken || null;
         this.#backgroundClient = options.backgroundClient || null;
     }
 
-    public set authToken(authToken: string) {
-        this.#authToken = authToken;
+    public set accessToken(accessToken: string) {
+        this.#accessToken = accessToken;
     }
 
-    public get authToken() {
-        return this.#authToken || '';
+    public get accessToken() {
+        return this.#accessToken || '';
     }
 
-    public createAuthToken({
+    public createAccessToken({
         refreshToken,
         grantType = 'refresh_token',
-    }: AuthTokenParams): Promise<AuthTokenResponse> {
+    }: AccessTokenParams): Promise<AccessTokenResponse> {
         const params = new FormData();
         params.append('refresh_token', refreshToken);
         if (grantType) {
@@ -117,7 +117,6 @@ export class QredoAPI {
     }
 
     #request = async (...params: Parameters<typeof fetch>) => {
-        // TODO: append authToken to request?
         let tries = 0;
         while (tries++ <= 1) {
             // TODO: add monitoring?
@@ -125,7 +124,7 @@ export class QredoAPI {
                 ...params[1],
                 headers: {
                     ...params[1]?.headers,
-                    Authorization: `Bearer ${this.#authToken}`,
+                    Authorization: `Bearer ${this.#accessToken}`,
                 },
             });
             const dataJson = await response.json();
@@ -134,19 +133,22 @@ export class QredoAPI {
             }
             if (response.status === 401) {
                 if (this.#backgroundClient && tries === 1) {
-                    if (this.#authTokenRenewInProgress) {
-                        await this.#authTokenRenewInProgress;
+                    if (this.#accessTokenRenewInProgress) {
+                        await this.#accessTokenRenewInProgress;
                     } else {
-                        this.#authTokenRenewInProgress = this.#backgroundClient
-                            .getQredoApiInfo(this.qredoID, true)
-                            .finally(
-                                () => (this.#authTokenRenewInProgress = null)
-                            );
+                        this.#accessTokenRenewInProgress =
+                            this.#backgroundClient
+                                .getQredoConnectionInfo(this.qredoID, true)
+                                .finally(
+                                    () =>
+                                        (this.#accessTokenRenewInProgress =
+                                            null)
+                                );
                         const { qredoInfo } = await this
-                            .#authTokenRenewInProgress;
-                        this.#authToken = qredoInfo?.authToken || null;
+                            .#accessTokenRenewInProgress;
+                        this.#accessToken = qredoInfo?.accessToken || null;
                     }
-                    if (this.#authToken) {
+                    if (this.#accessToken) {
                         continue;
                     }
                 }

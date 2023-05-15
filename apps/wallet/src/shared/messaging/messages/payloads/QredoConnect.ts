@@ -13,11 +13,11 @@ import { type Wallet } from '_src/shared/qredo-api';
 type Methods = {
     connect: QredoConnectInput;
     connectResponse: { allowed: boolean };
-    pendingRequestsUpdate: { requests: UIQredoPendingRequest[] };
     getPendingRequest: { requestID: string };
     getPendingRequestResponse: { request: UIQredoPendingRequest | null };
     getQredoInfo: { qredoID: string; refreshAccessToken: boolean };
     getQredoInfoResponse: { qredoInfo: UIQredoInfo | null };
+    qredoUpdate: { entities: 'pendingRequests' | 'qredoConnections' };
     acceptQredoConnection: {
         qredoID: string;
         accounts: Wallet[];

@@ -179,6 +179,13 @@ class VaultStorageClass {
         await this.updateSessionStorage();
     }
 
+    public getQredoToken(qredoID: string) {
+        if (!this.#vault) {
+            throw new Error('Error, vault is locked. Unlock the vault first.');
+        }
+        return this.#vault.qredoTokens.get(qredoID) || null;
+    }
+
     private async updateSessionStorage() {
         if (!this.#vault || !isSessionStorageSupported()) {
             return;

@@ -13,8 +13,7 @@ import { lastValueFrom, map, take } from 'rxjs';
 
 import { growthbook } from '../experimentation/feature-gating';
 import {
-    getQredoPendingRequestFromQueryKey,
-    makeQredoPendingRequestQueryKey,
+    QREDO_CONNECTION_INFO_KEY_COMMON,
     QREDO_PENDING_REQUEST_KEY_COMMON,
 } from '../pages/qredo-connect/utils';
 import { createMessage } from '_messages';
@@ -377,7 +376,6 @@ export class BackgroundClient {
     }
 
     public fetchPendingQredoConnectRequest(requestID: string) {
-        console.log('fetchPendingQredoConnectRequest');
         return lastValueFrom(
             this.sendMessage(
                 createMessage<QredoConnectPayload<'getPendingRequest'>>({
@@ -404,7 +402,7 @@ export class BackgroundClient {
         );
     }
 
-    public getQredoApiInfo(qredoID: string, refreshAccessToken = false) {
+    public getQredoConnectionInfo(qredoID: string, refreshAccessToken = false) {
         return lastValueFrom(
             this.sendMessage(
                 createMessage<QredoConnectPayload<'getQredoInfo'>>({
@@ -519,28 +517,18 @@ export class BackgroundClient {
             action = changeActiveNetwork({
                 network: payload.network,
             });
-        } else if (isQredoConnectPayload(payload, 'pendingRequestsUpdate')) {
-            const currentData = this._queryClient.getQueriesData({
-                queryKey: QREDO_PENDING_REQUEST_KEY_COMMON,
+        } else if (isQredoConnectPayload(payload, 'qredoUpdate')) {
+            const entitiesToKey: Record<
+                QredoConnectPayload<'qredoUpdate'>['args']['entities'],
+                readonly string[]
+            > = {
+                pendingRequests: QREDO_PENDING_REQUEST_KEY_COMMON,
+                qredoConnections: QREDO_CONNECTION_INFO_KEY_COMMON,
+            };
+            this._queryClient.invalidateQueries({
+                queryKey: entitiesToKey[payload.args.entities],
             });
-            const { requests } = payload.args;
-            currentData.forEach(([queryKey]) => {
-                if (
-                    !requests.find(
-                        ({ id }) =>
-                            id === getQredoPendingRequestFromQueryKey(queryKey)
-                    )
-                ) {
-                    this._queryClient?.setQueryData(queryKey, null);
-                }
-            });
-            requests.forEach((aRequest) => {
-                this._queryClient?.setQueryData(
-                    makeQredoPendingRequestQueryKey(aRequest.id),
-                    aRequest
-                );
-            });
-        } // TODO add updates for UIQredoInfo
+        }
         if (action) {
             this._dispatch(action);
         }

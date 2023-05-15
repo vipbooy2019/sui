@@ -3,6 +3,7 @@
 
 import { debounce } from 'throttle-debounce';
 import { v4 as uuid } from 'uuid';
+import Browser from 'webextension-polyfill';
 
 import { type Connections } from '../connections';
 import {
@@ -13,7 +14,7 @@ import {
     getFromLocalStorage,
     setToLocalStorage,
 } from '../storage-utils';
-import { isSameQredoConnection, toUIQredoPendingRequest } from './utils';
+import { isSameQredoConnection } from './utils';
 
 import type {
     QredoConnectPendingRequest,
@@ -80,17 +81,13 @@ export async function deletePendingRequest(
     );
 }
 
-// use id for existing stored connection to make sure we override it
 export async function createPendingRequest(
-    options: Omit<
-        QredoConnectPendingRequest,
-        'id' | 'messageIDs' | 'windowID'
-    > & { id?: string },
+    options: Omit<QredoConnectPendingRequest, 'id' | 'messageIDs' | 'windowID'>,
     messageID: string
 ) {
     const newRequest: QredoConnectPendingRequest = {
         ...options,
-        id: options.id || uuid(),
+        id: uuid(),
         windowID: null,
         messageIDs: [messageID],
     };
@@ -105,6 +102,7 @@ export async function updatePendingRequest(
         messageID?: string;
         append?: boolean;
         token?: string;
+        accessToken?: string;
     }
 ) {
     const request = await getPendingRequest(id);
@@ -123,6 +121,9 @@ export async function updatePendingRequest(
     }
     if (change.token) {
         request.token = change.token;
+    }
+    if (change.accessToken) {
+        request.accessToken = change.accessToken;
     }
     await storePendingRequest(request);
 }
@@ -162,12 +163,33 @@ export async function storeQredoConnection(qredoConnection: QredoConnection) {
     await storeAllQredoConnections(newConnections);
 }
 
+export async function storeQredoConnectionAccessToken(
+    qredoID: string,
+    accessToken: string
+) {
+    const existingConnection = await getQredoConnection(qredoID);
+    if (existingConnection) {
+        existingConnection.accessToken = accessToken;
+        await storeQredoConnection(existingConnection);
+    }
+}
+
 const debouncedUIPendingQredoUpdate = debounce(
     100,
-    (connections: Connections, newValue: QredoConnectPendingRequest[]) => {
+    (connections: Connections) => {
         connections.notifyUI({
-            event: 'pendingQredoConnectUpdate',
-            pendingRequests: newValue.map(toUIQredoPendingRequest),
+            event: 'qredoUpdate',
+            entities: 'pendingRequests',
+        });
+    }
+);
+
+const debouncedUIQredoConnectionUpdate = debounce(
+    100,
+    async (connections: Connections) => {
+        connections.notifyUI({
+            event: 'qredoUpdate',
+            entities: 'qredoConnections',
         });
     }
 );
@@ -175,17 +197,13 @@ const debouncedUIPendingQredoUpdate = debounce(
 export function registerForQredoChanges(connections: Connections) {
     addSessionStorageEventListener((changes) => {
         if (SESSION_STORAGE_KEY in changes) {
-            debouncedUIPendingQredoUpdate(
-                connections,
-                changes[SESSION_STORAGE_KEY].newValue
-            );
+            debouncedUIPendingQredoUpdate(connections);
+            debouncedUIQredoConnectionUpdate(connections);
         }
-        // TODO notify for qredo accepted connections changes
+    });
+    Browser.storage.local.onChanged.addListener((changes) => {
         if (STORAGE_ACCEPTED_CONNECTIONS_KEY in changes) {
-            console.log(
-                'qredo connections changed',
-                changes[STORAGE_ACCEPTED_CONNECTIONS_KEY]
-            );
+            debouncedUIQredoConnectionUpdate(connections);
         }
     });
 }

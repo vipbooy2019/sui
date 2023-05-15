@@ -79,7 +79,6 @@ const keyringStatusCallback = () => {
         event: 'lockStatusUpdate',
         isLocked: Keyring.isLocked,
     });
-    console.log(Keyring.getAccounts());
 };
 Keyring.on('lockedStatusUpdate', keyringStatusCallback);
 Keyring.on('accountsChanged', keyringStatusCallback);

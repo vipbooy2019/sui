@@ -95,7 +95,6 @@ export class Vault {
             ),
             qredoTokens: Object.fromEntries(this.qredoTokens.entries()),
         };
-        console.log({ dataToEncrypt });
         return {
             v: LATEST_VAULT_VERSION,
             data: await encrypt(password, dataToEncrypt),

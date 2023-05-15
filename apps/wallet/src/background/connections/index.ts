@@ -3,7 +3,6 @@
 
 import Browser from 'webextension-polyfill';
 
-import { type UIQredoPendingRequest } from '../qredo/types';
 import { ContentScriptConnection } from './ContentScriptConnection';
 import { KeepAliveConnection } from './KeepAliveConnection';
 import { UiConnection } from './UiConnection';
@@ -127,8 +126,8 @@ export class Connections {
             | { event: 'networkChanged'; network: NetworkEnvType }
             | { event: 'lockStatusUpdate'; isLocked: boolean }
             | {
-                  event: 'pendingQredoConnectUpdate';
-                  pendingRequests: UIQredoPendingRequest[];
+                  event: 'qredoUpdate';
+                  entities: QredoConnectPayload<'qredoUpdate'>['args']['entities'];
               }
     ) {
         for (const aConnection of this.#connections) {
@@ -147,15 +146,13 @@ export class Connections {
                             notification.isLocked
                         );
                         break;
-                    case 'pendingQredoConnectUpdate':
+                    case 'qredoUpdate':
                         aConnection.send(
-                            createMessage<
-                                QredoConnectPayload<'pendingRequestsUpdate'>
-                            >({
+                            createMessage<QredoConnectPayload<'qredoUpdate'>>({
                                 type: 'qredo-connect',
-                                method: 'pendingRequestsUpdate',
+                                method: 'qredoUpdate',
                                 args: {
-                                    requests: notification.pendingRequests,
+                                    entities: notification.entities,
                                 },
                             })
                         );

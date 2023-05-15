@@ -25,8 +25,7 @@ export function QredoConnectInfoPage() {
     const navigate = useNavigate();
     useEffect(() => {
         if (!isLoading && !data) {
-            console.log('data empty', data, 'close window');
-            //window.close();
+            window.close();
         }
     }, [isLoading, data]);
     if (isLoading) {

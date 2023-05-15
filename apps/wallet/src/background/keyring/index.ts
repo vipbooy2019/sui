@@ -258,6 +258,13 @@ export class Keyring {
         this.notifyAccountsChanged();
     }
 
+    public getQredoRefreshToken(qredoID: string) {
+        if (this.isLocked) {
+            throw new Error('Wallet is locked');
+        }
+        return VaultStorage.getQredoToken(qredoID);
+    }
+
     public async handleUiMessage(msg: Message, uiConnection: UiConnection) {
         const { id, payload } = msg;
         try {

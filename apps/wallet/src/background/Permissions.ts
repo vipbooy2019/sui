@@ -277,7 +277,6 @@ class Permissions {
     }
 
     public async ensurePermissionAccountsUpdated(accounts: Account[]) {
-        console.time('ensurePermissionAccountsUpdated');
         const allPermissions = await this.getPermissions();
         const availableAccountsIndex = accounts.reduce<Record<string, boolean>>(
             (acc, { address }) => {
@@ -286,12 +285,6 @@ class Permissions {
             },
             {}
         );
-        console.log(
-            'ensurePermissionAccountsUpdated',
-            accounts,
-            allPermissions,
-            availableAccountsIndex
-        );
         Object.entries(allPermissions).forEach(
             ([origin, { accounts, allowed }]) => {
                 if (allowed) {
@@ -299,13 +292,11 @@ class Permissions {
                         (anAddress) => !availableAccountsIndex[anAddress]
                     );
                     if (accountsToDisconnect.length) {
-                        console.log('removing accounts', accountsToDisconnect);
                         this.delete(origin, accountsToDisconnect);
                     }
                 }
             }
         );
-        console.timeEnd('ensurePermissionAccountsUpdated');
     }
 
     public on = this.#events.on;
