@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { useFeatureIsOn } from '@growthbook/growthbook-react';
+import { useAppsBackend } from '@mysten/core';
 import {
     Info12,
     WalletActionBuy24,
@@ -9,6 +9,7 @@ import {
     Swap16,
 } from '@mysten/icons';
 import { SUI_TYPE_ARG, Coin } from '@mysten/sui.js';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -22,7 +23,8 @@ import { Text } from '_app/shared/text';
 import { CoinItem } from '_components/active-coins-card/CoinItem';
 import Alert from '_components/alert';
 import Loading from '_components/loading';
-import { useGetAllBalances, useGetCoinBalance } from '_hooks';
+import { useAppSelector, useGetAllBalances, useGetCoinBalance } from '_hooks';
+import { API_ENV } from '_src/shared/api-env';
 import { AccountSelector } from '_src/ui/app/components/AccountSelector';
 import { useLedgerNotification } from '_src/ui/app/hooks/useLedgerNotification';
 import PageTitle from '_src/ui/app/shared/PageTitle';
@@ -94,7 +96,19 @@ function TokenDetails({ coinType }: TokenDetailsProps) {
         isLoading,
         isFetched,
     } = useGetCoinBalance(activeCoinType, accountAddress);
-    const networkOutage = useFeatureIsOn('wallet-network-outage');
+    const { apiEnv } = useAppSelector((state) => state.app);
+    const request = useAppsBackend();
+    const { data } = useQuery({
+        queryKey: ['apps-backend', 'monitor-network'],
+        queryFn: () =>
+            request<{ degraded: boolean }>('monitor-network', {
+                project: 'WALLET',
+            }),
+        // Keep cached for 2 minutes:
+        staleTime: 2 * 60 * 1000,
+        retry: false,
+        enabled: apiEnv === API_ENV.mainnet,
+    });
 
     useLedgerNotification();
 
@@ -111,8 +125,8 @@ function TokenDetails({ coinType }: TokenDetailsProps) {
 
     return (
         <>
-            {networkOutage && (
-                <div className="rounded-2xl bg-warning-light border border-solid border-warning-dark/20 text-warning-dark flex items-center py-2 px-3">
+            {apiEnv === API_ENV.mainnet && data?.degraded && (
+                <div className="rounded-2xl bg-warning-light border border-solid border-warning-dark/20 text-warning-dark flex items-center py-2 px-3 mb-4">
                     <Info12 className="shrink-0" />
                     <div className="ml-2">
                         <Text variant="pBodySmall" weight="medium">
@@ -123,6 +137,7 @@ function TokenDetails({ coinType }: TokenDetailsProps) {
                     </div>
                 </div>
             )}
+
             <Loading loading={isFirstTimeLoading}>
                 {coinType && <PageTitle title={coinSymbol} back="/tokens" />}
 
